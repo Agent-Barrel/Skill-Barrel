@@ -105,7 +105,7 @@ The two lists in [skill-plugin/open-decisions.md](skill-plugin/open-decisions.md
 - **Repository.** [Agent-Barrel/Skill-Barrel](https://github.com/Agent-Barrel/Skill-Barrel) (public) since 2026-10-12. It started from the previous repository's files without their history, so it has one branch, `main`.
   - Commit hashes in the docs belong to the previous repository.
   - So does the `archive/tauri-desktop-app` branch: the Rust/Tauri app, the React console, the TS relay, the old Python web app (with its interview pipeline) and old run records.
-  - On the user's Mac the local clone keeps that history. The previous remote is `legacy`, and the old branches stay local (`old-main`, `archive/tauri-desktop-app`, `docs/readiness-2026-10-12`). Read old files there with `git show archive/tauri-desktop-app:<path>`.
+  - The old app's code exists only in the previous repository, on its `archive/tauri-desktop-app` branch. Clones of this repository have neither that branch nor a remote for the previous repository.
 - **Contents of main.**
   - `step2step/`
   - `barrel/core/{unitloop,gates,failures,preflight,verify,gitops}.py` with 6 test files in `barrel/tests/`
