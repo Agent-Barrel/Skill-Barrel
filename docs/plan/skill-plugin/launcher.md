@@ -116,6 +116,7 @@ Sessions, tools and the user talk to the launcher through the `barrel` command, 
 | `barrel memory render --spec requirements\|features` | Orchestrator | Renders a spec from the units ([interviews.md](interviews.md#review)) |
 | `barrel shared put\|disable\|delete …` | Orchestrator | Writes, disables or deletes an entry of shared memory, one writer at a time for the PC ([memory.md](memory.md#shared)) |
 | `barrel secret ask <name> --reason <text>` | Orchestrator | Opens the macOS input dialog on the Mac for a credential. The value goes to the Keychain under that name (Q20; [memory.md](memory.md#secrets)) |
+| `barrel slack read --thread <post> \| --channel` | Orchestrator, task sessions | Reads Slack with the bot token, for Codex sessions when the official Slack MCP's OAuth does not work. The bot is only in Barrel's own channels, so it reads nothing else (spike fallback; [slack.md](slack.md#setup)) |
 | `barrel secret set <name>` | The user | Stores a secret from a terminal; an option for developers (Q20) |
 | `barrel secret get <name>` / `barrel secret put <name>` | Task sessions | Reads a secret, or stores one the leaf created, for the names in its contract ([memory.md](memory.md#secrets)) |
 | `barrel settings sleep os\|ac\|always` | The user | Sets the [sleep policy](#sleep) |
@@ -138,7 +139,7 @@ The launcher checks every command against the caller's role. Example: a task ses
 | `memory index` | The orchestrator and the user |
 | `task …`, `session start`, `post`, `handoff`, `memory render`, `shared …`, `secret ask` | The orchestrator. Its subagents run inside the same session, so this check cannot tell them apart; a hook denies every `barrel` command in subagent calls instead ([plugin.md](plugin.md#hooks)) |
 | `memory begin`, `memory end` | The orchestrator, task sessions and fresh auxiliary sessions, for their own turn only |
-| `event` | The orchestrator and task sessions |
+| `event`, `slack read` | The orchestrator and task sessions |
 | `secret get`, `secret put` | Task sessions, for the names in their contract's `secrets` |
 
 How the caller is identified:

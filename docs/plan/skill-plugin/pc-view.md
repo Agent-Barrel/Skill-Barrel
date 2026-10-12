@@ -1,6 +1,6 @@
 # PC view
 
-The PC view is a small local web page, served by the launcher, that shows how a project's work is going and lets the user stop and resume it. It has to be very light (Q10, Q10-2 option 10-e W). Answers and instructions go through Slack, not here (Q10-2). The settled rules are in [q10-confirmed.md](../interview/q10-confirmed.md) §4.
+The PC view is a small local web page, served by the launcher, that shows how a project's work is going and lets the user stop and resume it. It has to be very light (Q10, Q10-2 option 10-e W). Answers, instructions and cancelling a run go through Slack, not here (Q10-2; archived Q-009). The settled rules are in [q10-confirmed.md](../interview/q10-confirmed.md) §4.
 
 <a id="build"></a>
 ## How it is built (Q10-2)
@@ -17,10 +17,13 @@ The PC view is a small local web page, served by the launcher, that shows how a 
 <a id="content"></a>
 ## What it shows (Q10-2)
 
+For each run of the project, under its request name (Q18; AI):
 - The large > medium > leaf tree with each node's status.
 - Running sessions, with engine and model.
 - Leaves that are blocked or waiting for an answer, and why, from the fixed set of reasons. Like Slack, the page is built from templates and values, never from free text ([launcher.md](launcher.md#events)) (AI).
 - Questions waiting for an answer, with links to their Slack threads.
+
+For the whole project:
 - Recent events, from the same event log Slack uses ([launcher.md](launcher.md#events)).
 - The Slack connection state and the number of posts not sent yet (Q10-2 default). Posts waiting for the Korean writer count as unsent too ([interviews.md](interviews.md#posting)).
 
@@ -29,7 +32,8 @@ The page follows the Slack language setting (Q10-2 default).
 <a id="writes"></a>
 ## What it can do
 
-- **[중지] and [재개] only** (Q10, Q10-2). [중지] asks for confirmation once (AI); [재개] does not. Both follow the sequence in [launcher.md](launcher.md#stop).
+- **[중지] and [재개] only** (Q10, Q10-2). Both act on every run of the project, as in Slack (Q18). [중지] asks for confirmation once (AI); [재개] does not. Both follow the sequence in [launcher.md](launcher.md#stop).
+- Cancelling a run is a Slack command only (archived Q-009; Q17; [runs.md](runs.md#cancel)).
 
 <a id="security"></a>
 ## Security (Q10-2)
@@ -57,11 +61,11 @@ The user asked for a way to reopen the page whenever they want, and left the met
    - When run, it calls `barrel view open`, which opens a project's address in the default browser. Then the app quits; it never stays resident.
      - `barrel view open` starts the launcher first if it is not running ([launcher.md](launcher.md#process)) (AI).
      - It reads the addresses from run state each time.
-   - With several projects running, it asks which one. With none, it says so.
+   - With several projects that have runs, it asks which one. With none, it says so. Archived projects are not listed (archived Q-020).
    - It holds no token.
    - Tested on this Mac: 192 KB, ad-hoc signed, passed `codesign --verify --deep --strict`, ran without a Gatekeeper prompt.
 3. **"화면" in the Slack channel.** The launcher opens that project's page on this Mac. Typing it on a phone opens the page on the PC.
-4. **Running the skill again.** In a project whose run is active, the skill opens the page instead of starting another orchestrator. If it was invoked with a request, it passes that text to the running orchestrator first ([runs.md](runs.md#start)).
+4. **Starting a run.** Running the skill always starts a new run now (Q18), and the start opens the project's page, which shows every run. The 2026-10-11 design opened the page instead of starting another run; Q18 replaced that.
 
 <a id="checks"></a>
 ## Still to check
