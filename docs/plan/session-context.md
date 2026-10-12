@@ -1,6 +1,6 @@
 # Session context for Barrel design work
 
-Updated 2026-10-12 (readiness check, Q17–Q21, move to [Agent-Barrel/Skill-Barrel](https://github.com/Agent-Barrel/Skill-Barrel))
+Updated 2026-10-12 (two readiness checks, Q17–Q24, move to [Agent-Barrel/Skill-Barrel](https://github.com/Agent-Barrel/Skill-Barrel))
 
 This file holds what a fresh Claude Code or Codex session needs, beyond [README.md](README.md), [interview/](interview/README.md) and the canonical design in [skill-plugin/](skill-plugin/README.md), to continue Barrel's work. Before this file existed, most of it lived only in one session's conversation and in that session's CLI memory. CLI memory is per machine and per account, so other sessions can't see it. It is written in English because it is a session-to-session document ([Q08](interview/q08-korean-docs.md)).
 
@@ -15,7 +15,7 @@ If this file and an interview answer disagree, the verbatim interview answer win
    - It was rewritten on 2026-10-08 from Q01–Q16.
    - It was checked again on 2026-10-11 against the verbatim answers, the original flow, the archived drafts and the code. That pass fixed two contradictions with Q02 and Q05, filled the gaps the flow needs, and added [runs.md](skill-plugin/runs.md).
    - Every statement in it carries a source tag, and the verbatim interview answers win over it.
-   - Q17–Q21 (2026-10-12) are not in it yet. Read [readiness-2026-10-12.md](readiness-2026-10-12.md) before relying on it.
+   - Q17–Q24 (2026-10-12) are not in it yet. Read [readiness-2026-10-12.md](readiness-2026-10-12.md) before relying on it.
 5. [00-original-flow.md](00-original-flow.md) and [insight.md](insight.md).
 6. [ci-test-redundancy.md](ci-test-redundancy.md) (Korean): when a test or a CI job adds nothing, and how to judge it. Check it before adding tests or CI.
 
@@ -37,13 +37,14 @@ These rules come from the 2026-10-06 session.
   - a short summary marked "원문이 우선"
   - any AI analysis in its own clearly labeled section
 
-  Add a row to `interview/README.md`. Follow-up answers get their own files (`q03-2`, `q03-3`, `q04-2`). When a later answer supersedes earlier analysis, put a pointer in the older file. Never edit a verbatim answer, except that the previous product name is replaced by `[이전 이름]` (§6). Don't fold answers into other docs until the user asks.
+  Add a row to `interview/README.md`. Follow-up answers get their own files (`q03-2`, `q03-3`, `q04-2`). When a later answer supersedes earlier analysis, put a pointer in the older file. Never edit a verbatim answer, except for two masks the user asked for: the previous product name becomes `[이전 이름]` (§6), and the workspace and person names in Q23 become `[워크스페이스 이름]` and `[사용자 이름]` (§5). Don't fold answers into other docs until the user asks.
 - **Consolidated record.** When the user asks for the settled result of a topic, write `interview/qNN-confirmed.md`. It gathers the decisions and tags each item with its source: the user's answer, a default the user did not object to, or a detail the AI decided because the user left it to the AI. [q10-confirmed.md](interview/q10-confirmed.md) is the first one.
 - **Carry decisions out.** Once the user decides, implement the decision as stated. Don't reopen it or attach caveats. Never put warnings about account switching or terms of service in any doc or code ([Q05](interview/q05-accounts.md)).
   - Don't ask again about something an earlier answer already covers. In Q12 the user objected that moving work to another CLI had already been decided ("그냥 하라고 했잖아").
 - **Engines, not providers.** Claude Code and Codex are only engines that run Barrel. Never design roles or research by provider, such as "Claude-side research" and "Codex-side research". Cross-checking means an independent verification step, and model and effort follow the difficulty of the work ([Q16](interview/q16-engines-and-verification.md)). The user reacted sharply when a question assumed a split by provider.
 - **Plan mode.** In plan mode only the plan file can be written. Keep answers verbatim in the plan file and write the interview files first thing after approval, as was done for Q11–Q16.
 - **Take the user's words literally.** Don't add roles or components the user did not ask for. In Q03-2 the skill-invoking session was turned into a long-lived relay for questions. The user wanted that session only to launch the orchestrator and end, with human questions going to Slack (original flow item 11). See [Q03-3](interview/q03-3-launcher-and-slack.md).
+  - **The same goes for questions.** A readiness check asks only about gaps or conflicts in what the user already decided. It never proposes a new capability. In Q22 and Q22-2 the AI asked about starting runs from Slack and about a resident launcher registered as a login item. The user answered that such a design would be a separate app, and that this repo builds a skill ([Q22-2](interview/q22-2-launcher-residency.md)).
 - **Archived decisions are the user's.** The user decisions in the archived app plan ([decisions.csv](../archive/app-plan/decisions.csv)) still count wherever they fit the skill. Don't drop one without asking. Q17 restored the ones the 2026-10-08 rewrite had dropped.
 - **Map existing code first.** Before proposing a mechanism, map the existing code with file:line references and present the design as reuse or extension of it. On main, that means `step2step/`, `barrel/` and `orchestration/drivers/`. Old code is on the archive branch.
 - **No `claude -p`.** Never use `claude -p` for Claude sessions. This repo deliberately drives interactive sessions through `step2step`.
@@ -75,6 +76,9 @@ These rules come from the 2026-10-06 session.
 | Credentials and sudo (flow 10) | [Q20](interview/q20-credentials-and-sudo-tool.md) | Credentials through a native macOS dialog; a dedicated sudo tool that uses a password saved once. |
 | Follow-ups to the restored decisions | [Q17-2](interview/q17-2-repo-list-config-and-updates.md) | The planning repo lists the project's repos to clone; the Barrel-managed CLI environment must be in the skill; self-update from the remote replaces the pinned CLI. Also: the previous product name appears in no file of the repo. |
 | Consent for updates | [Q21](interview/q21-auto-update-consent.md) | None, and no Slack notice. Barrel checks the remote's latest version when it runs, like Claude Code. |
+| New runs from Slack; a resident launcher | [Q22-2](interview/q22-2-launcher-residency.md) | Neither. Barrel stays a skill: no login item, and Slack only instructs active runs. [Q22](interview/q22-slack-new-requests.md) was asked again as Q22-2. |
+| Spike inputs | [Q23](interview/q23-spike-inputs.md) | Only the user and only new channels in the Slack workspace named there; new test projects under `~/Desktop/Projects/`; none of the user's ongoing projects. Details in [readiness](readiness-2026-10-12.md) "Before the spike". |
+| Keeping memory current | [Q24](interview/q24-memory-update-queue.md) | The user's own instruction. One memory queue per project in the launcher. A finished session merges its code, then updates memory and ends, in finishing order. Contracts list the memory units they may change, and "in progress" is shown to every session from run state. Leaves that touch the same memory units never run together. The orchestrator consolidates memory at each medium topic's end. |
 
 The combined picture that used to follow this table is now the canonical design in [skill-plugin/](skill-plugin/README.md).
 
@@ -87,12 +91,18 @@ All of OD-1 to OD-10 are settled. Their status and sources are in [skill-plugin/
 None.
 - Q11–Q16 (2026-10-07 and 2026-10-08) covered the questions this section used to list: launcher topology, model routing, OD-4, OD-6, OD-8, and Korean text from Codex.
 - On 2026-10-12 the user asked whether everything needed to build the skill was decided. The check found four decisions for the user, asked as Q17–Q20 (§3). The user's follow-ups became Q17-2 and Q21.
+- The user asked again the same day. The second check asked Q22 and Q22-2, and both kept the current design. Q23 collected the spike inputs.
+- Then the user gave Q24 unasked: keep memory current after every session, through a queue with one writer at a time. The user chose the AI's four additions.
 
 **Pending revision.** None of the 2026-10-12 results are in `skill-plugin/` yet. [readiness-2026-10-12.md](readiness-2026-10-12.md) lists what the next revision must change:
 - the restored decisions, Q17-2 and Q18–Q21
 - 18 gaps the AI fills
 - fallbacks for 9 spike items
 - 7 doc errors
+- Q22-2 and the second check's additions: archived D-016, Q-002 and Q-020, and a login fallback for restored decision 5
+- Q24: the memory queue, memory updates at the end of every session, and memory units in the parallel rule
+
+**Q23 names:** the Q23 answer named a Slack workspace and a person verbatim. The repository is public, so on 2026-10-13 the user chose to mask both, as `[워크스페이스 이름]` and `[사용자 이름]` ([Q23](interview/q23-spike-inputs.md#mask)). The real values are kept outside the repo, in this Mac's CLI memory. Never write them into a repo file.
 
 The revision happens when the user asks.
 

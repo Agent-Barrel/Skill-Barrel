@@ -23,6 +23,7 @@ What was checked:
 - **Three decisions were new.** Q18–Q20 settled them.
 - **Follow-ups.** The user then adjusted three restored groups (Q17-2) and settled how updates are applied (Q21).
 - **Nothing else needs the user.** What remains is for the AI: 18 gaps, 9 spike items without a fallback, and 7 doc errors.
+- **A second check the same day** ([below](#second)) found two more questions. The user answered both by keeping the current design (Q22, Q22-2), and gave the spike inputs (Q23).
 
 ## Decisions made on 2026-10-12
 
@@ -34,6 +35,10 @@ What was checked:
 | Q20 | Credentials come through a native macOS dialog on the Mac. sudo goes through a dedicated tool that uses a password the user saves once | [q20](interview/q20-credentials-and-sudo-tool.md) |
 | Q17-2 | Group 1: the planning repo lists the project's repos, and work starts by cloning them. Group 5 must be in the skill. Group 8: Barrel auto-updates from the remote instead of pinning a CLI. The previous product name appears in no file of the repo | [q17-2](interview/q17-2-repo-list-config-and-updates.md) |
 | Q21 | Updates need no consent and no Slack notice. Like Claude Code, Barrel compares its version with the remote's latest when it runs, and updates itself | [q21](interview/q21-auto-update-consent.md) |
+| Q22 | Asked whether Slack may start new runs. The user asked back whether the bot can work without the skill, so the question was asked again as Q22-2 | [q22](interview/q22-slack-new-requests.md) |
+| Q22-2 | Barrel stays a skill. No login item, no resident launcher, and Slack never starts a run: "that would be a separate app". The current design stands | [q22-2](interview/q22-2-launcher-residency.md) |
+| Q23 | Spike inputs: a Slack workspace with only the user and only new channels; new test projects under `~/Desktop/Projects/`; none of the user's ongoing projects | [q23](interview/q23-spike-inputs.md) |
+| Q24 | The user's own instruction: memory is updated whenever a session ends, through a queue that lets one writer at a time, and work is announced when it starts. The user then chose the AI's four additions ([below](#q24)) | [q24](interview/q24-memory-update-queue.md) |
 
 <a id="restored"></a>
 ## Restored archived decisions (Q17)
@@ -188,16 +193,97 @@ All of these go into [validation.md](skill-plugin/validation.md).
 6. The not-carried list is incomplete: 63 of the 93 archived decision IDs appear nowhere in `skill-plugin/` (exact ID match, 2026-10-12).
 7. runs.md:28-29's `git init` conflicts with Q-014's parent-folder layout.
 
+<a id="second"></a>
+## Second check (same day)
+
+After the morning check, the user asked the same two things again. The check was repeated against the same sources, plus a scan of all 93 archived decision IDs against every file in `docs/plan/`.
+
+**Verdict.** Unchanged: the design and the interview records are enough to build the skill. Two questions were asked, and both kept the current design.
+
+**What Q22 and Q22-2 settle**
+- Barrel stays a skill. The launcher is not registered as a login item and does not stay resident on its own. The user: if it worked like that, a separate app would be the cleaner design (Q22-2).
+- Slack never starts a run. As before, it takes instructions for active runs only, and new requests start from the skill (Q18).
+- After a reboot or a launcher crash, the remaining runs resume when the skill, Barrel.app or a `barrel` command starts the launcher again (AI default 1, archived Q-007).
+- **Revision:** launcher.md#process says a launchd agent starts the launcher again "at login (`RunAtLoad`)". launchd stays only as the fallback for a detached launcher that does not survive (Q11). It never starts the launcher at login.
+
+**Added without asking (AI)**
+1. **Archived decisions that no file in `docs/plan/` mentioned.** They fit the skill, so they go in:
+   - **D-016, Barrel runs on the user's everyday Mac.** Sessions and gate commands run at a lower scheduling priority, so the user's own work stays responsive. Docs: launcher.md#process, task-execution.md#lifecycle.
+   - **Q-002, connecting GitHub is recommended but can be skipped.** The setup profile step offers `gh auth login` and allows skipping. It is offered again when a delivery needs a remote. Docs: plugin.md#setup, runs.md#delivery.
+   - **Q-020, archiving a project, or deleting Barrel's records of it.**
+     - Archiving hides the project from Barrel.app and the PC view and keeps its run state.
+     - Deleting removes the run state and the worktrees (`barrel project remove`). It never touches the repo, its `.barrel/`, remotes or deployments, and shared experience is generalized as Q-021 says.
+     - Both run through the skill or the `barrel` command.
+
+     Docs: runs.md#after, launcher.md#commands, memory.md.
+   - **The rest:** D-035 (no product accounts or billing) holds trivially. D-050 (monthly accounting of paid credits) does not apply while paid usage is off (restored decision 9). D-000 and D-021 are records about documents and history.
+2. **A fallback for restored decision 5** (spike). If a Barrel-managed config folder cannot reuse the account's existing login, setup signs in each Barrel folder once. The user said decision 5 must be in the skill (Q17-2), so isolation comes first. Docs: sessions.md#accounts, plugin.md#setup, validation.md.
+3. **Wireframes and detailed design (restored decision 2).**
+   - The format and the tools are implementation choices (archived P-002).
+   - Codex's built-in image generation (`$imagegen`, `gpt-image-2`) needs no API key. It counts toward the Codex plan's limits, so images need no paid API use ([docs](https://learn.chatgpt.com/docs/image-generation), checked 2026-10-12).
+   - Other services go through browser automation with the user's own sign-ins (archived Q-019).
+
+   Docs: workflow.md#stages, task-execution.md#review.
+4. **Not a design item:** the public repo has no LICENSE file.
+
+<a id="q24"></a>
+## What Q24 changes
+
+The user stressed that Barrel works as intended only if its memory is brought up to date after every piece of work. In the current design only the orchestrator writes memory units. A leaf's results stay in its result report in run state, and the parallel rule does not look at memory units. Q24 replaces that.
+
+**The queue**
+- One memory queue per project, inside the launcher. Every write to `.barrel/` memory units and task files goes through it, one writer at a time: task sessions, auxiliary sessions, the orchestrator, and the launcher when it records answers.
+- The launcher is the one process every session already talks to (Q11), so the queue needs no file locks. The existing code has no lock between processes; step2step has only thread locks.
+
+**End of a leaf.** A session that has finished queues up and ends only after its memory update, in finishing order. Its turn runs in this order:
+1. Merge the leaf's code into the run branch (Q14: the gates run again on the merged tree).
+2. Show the session the latest memory, including the units others changed while it waited.
+3. The session writes the memory for its own work: what it built, what it learned, choices it made inside its contract, the units it implemented.
+4. The launcher checks the update (format, links, the kinds this session may change) and commits it.
+5. Close the session.
+
+Memory updated before the merge would describe code that is not on the run branch if the merge failed. A session that ends without a merge (blocked on a question, abandoned) still records what it learned, such as a failed approach and why (archived D-040).
+
+**Consolidation.** At the end of each medium topic, the orchestrator reviews the units changed in that topic and removes duplicates and contradictions. This is already a handoff and regression-check point.
+
+**Announcing work**
+- The contract, committed when the medium topic is split, gains a list of the memory units the leaf may change.
+- "In progress" stays in run state (Q15) and is shown to every session together with the memory indexes. A lane is fixed to the commit it started from, so a note committed later would not reach sessions that are already running.
+
+**Parallel rule.** Two leaves never run together if one may change a memory unit that the other reads or may change. This is archived D-032 applied to memory units ("참조 문서 변경을 먼저 끝낸 뒤 이를 읽는 구현을 시작한다"), and it matches the user's words: dependent leaves, and leaves that could drift from the intent, run one at a time.
+
+**Details (AI; the user did not object)**
+- A task session writes only what it built and learned. It cannot change what the user wants: intent, requirements, features, the user's decisions, answers. If one of those must change, the orchestrator handles it as a question with its cascade (Q01).
+- The orchestrator checks each leaf's memory update against the contract in its next turn.
+- The user's stop does not wait for memory updates; it still halts within 15 s. Interrupted leaves update memory when they finish after resume.
+- If a session dies before its update, the next session for that leaf writes it from the leftover changes and the result report. Until then the leaf does not count as done.
+- A session that stalls during its turn loses the turn after a time limit, and its update is redone.
+
+**Replaces** AI defaults 8 and 22, under which task and auxiliary sessions never wrote `.barrel/`.
+
+**Docs to change:** memory.md#rules, task-execution.md#lifecycle, task-execution.md#lanes, task-tree.md#files, launcher.md#commands, launcher.md#events, launcher.md#recovery, plugin.md#hooks, sessions.md#orchestrator, validation.md.
+
 ## Before the spike
 
-Facts to get from the user:
-- which Slack workspace Barrel will use, and whether the user may install apps there
-- which existing repo to use for the maintenance task
+Answered in [Q23](interview/q23-spike-inputs.md):
+- **Slack:** the workspace named in Q23.
+  - Only the user takes part in tests. No other member is invited or mentioned.
+  - Existing channels are not used, neither posted to nor read. Tests use only the private channels Barrel creates.
+  - Whether the app installs without an admin is unknown. Spike item 19 finds out.
+- **Test projects:** all new, all under `~/Desktop/Projects/`, made by the AI:
+  - for the maintenance task, a light repo that looks lived-in: code, tests, build and test commands, a few commits
+  - for the multi-repo task, a parent folder with a planning repo and two code repos
+  - new concepts, created by running the skill from `~/Desktop/Projects/`
+- **Not used:** the user's ongoing projects and existing repos.
+- **No GitHub remotes** for the test repos unless the user agrees first.
+- **Public repo:** the Q23 record held the workspace name and a person's name verbatim. Before its first commit, on 2026-10-13, the user chose to mask both ([Q23](interview/q23-spike-inputs.md#mask)). The real values are kept outside the repo.
 
 ## Next step
 
 1. When the user asks, revise `skill-plugin/` with everything above:
    - the restored decisions, Q17-2, Q18–Q21, the gaps, the fallbacks, and the doc errors
+   - Q22-2 and the additions from the [second check](#second)
+   - [Q24](#q24): the memory queue and memory updates at the end of every session
    - open-decisions.md (AI defaults and not-carried) and migration.md, updated to match
 2. Then run the spike in [validation.md](skill-plugin/validation.md). Q17 makes it larger:
    - a multi-repo real task
