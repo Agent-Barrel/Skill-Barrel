@@ -1,0 +1,63 @@
+{
+  "name": "example-run",
+  "target_repo": "/path/to/target-repo",
+  "roadmap": "orchestration/roadmap.json",
+  "git": {
+    "branch": "test",
+    "allow_any_branch": false,
+    "push": {"remote": "origin", "branch": null},
+    "commit_prefix": "",
+    "commit_by": "driver",
+    "exclude": ["orchestration/status.json"]
+  },
+  "prompt": {
+    "project_name": "Example Gateway",
+    "one_liner": "a Rust/Pingora MITM proxy",
+    "north_star": "docs/todo/MISSION.md",
+    "references": ["references/pingora/", "src/"],
+    "scope_note": "implement + test + performance, no deployment",
+    "hard_rules": ["Pingora is pinned to 0.8.1; never use main-only APIs."],
+    "extra": ""
+  },
+  "ladder": {"models": ["claude-fable-5", "claude-opus-5"], "efforts": ["xhigh", "max"]},
+  "budget": {
+    "turn_seconds": 3600,
+    "unit_turns": 12,
+    "unit_wall_seconds": 14400,
+    "run_wall_seconds": 86400,
+    "stall_seconds": 180,
+    "progress_seconds": 1800
+  },
+  "gates": {
+    "timeout_seconds": 3600,
+    "before": [["docker", "builder", "prune", "-f"]],
+    "after_timeout": [["docker", "builder", "prune", "-f"]],
+    "env_recover": [["docker", "system", "prune", "-f"]]
+  },
+  "preflight": {"tools": ["git", "cargo", "docker"], "docker": true, "min_free_mb": 2048, "commands": []},
+  "notify": {"command": null, "webhook": null},
+  "on_unit_blocked": "halt",
+  "repeat_limit": 2,
+  "harness_retries": 2,
+  "usage_wait_seconds": 900,
+  "menu_default_answer": "Use your best judgement and continue; do not ask again.",
+
+  "_roadmap_example": {
+    "units": [
+      {
+        "id": "U1", "title": "Access log schema v2", "effort": "max",
+        "prompt": "Implement the v2 access log schema described in docs/backlog/01-log-schema.md ...",
+        "gates": {
+          "exists": {"paths": ["src/log/schema_v2.rs"], "symbols": [{"pattern": "schema_v2", "in": "src/"}]},
+          "build": "cargo build",
+          "unit": {"spec": {"shell": "CMAKE_POLICY_VERSION_MINIMUM=3.5 cargo test"}, "every_turn": true},
+          "integration": {"spec": ["bash", "docker/run-transparent-test.sh"], "every_turn": false, "timeout": 2400}
+        },
+        "expected_gate_seconds": 600,
+        "artifacts": [],
+        "budget": {"progress_seconds": 2400},
+        "depends_on": []
+      }
+    ]
+  }
+}

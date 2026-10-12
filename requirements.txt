@@ -1,0 +1,7 @@
+pywinpty>=3.0; sys_platform == "win32"
+ptyprocess>=0.7; sys_platform != "win32"
+pyte>=0.8
+comtypes>=1.4; sys_platform == "win32"  # optional, only for step2step/attach/uia_reader.py (UIA screen read)
+
+# optional: barrel.core.verify reads the target repo's project.yaml with it -- see [project.optional-dependencies].unitloop
+pyyaml

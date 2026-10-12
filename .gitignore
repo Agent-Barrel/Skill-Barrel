@@ -1,0 +1,46 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtual environments ────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Project runtime artifacts ───────────────────────────
+# Generated each run: settings json, signal_hook.py, signal file, pty-*/run logs.
+runtime/
+
+# Scratch working dir Claude runs in (created automatically if missing);
+# only holds throwaway test output. Remove this line to track it.
+test-folder/
+
+# ── Orchestration run artifacts (prompts/drivers/reports are tracked) ──
+orchestration/logs/
+orchestration/results/
+orchestration/app_dirs/
+
+# ── OS / editor cruft ───────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+.serena
+# Browser-automation artifacts (playwright MCP snapshots/screenshots)
+.playwright-mcp/
+
+done

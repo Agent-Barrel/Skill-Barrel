@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "step2step"
+version = "0.1.0"
+description = "Control Claude Code through PTY and Codex CLI through app-server using separate session backends."
+requires-python = ">=3.12"
+dependencies = [
+    "pywinpty>=3.0; sys_platform == 'win32'",
+    "ptyprocess>=0.7; sys_platform != 'win32'",
+    "pyte>=0.8",
+]
+
+[project.optional-dependencies]
+uia = ["comtypes>=1.4; sys_platform == 'win32'"]   # only for step2step/terminal/attach/uia_reader.py (reference/fallback)
+dev = ["pytest>=7"]
+unitloop = ["pyyaml"]      # optional: barrel.core.verify reads the target repo's project.yaml with it
+
+[project.scripts]
+step2step-claude = "step2step.claude.__main__:main"
+step2step-codex = "step2step.codex.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["step2step*", "barrel*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "barrel/tests"]
+markers = [
+    "live: real CLI session tests (opt-in; STEP2STEP_LIVE=1 for Claude, STEP2STEP_CODEX_LIVE=1 for Codex)",
+]
