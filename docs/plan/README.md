@@ -1,6 +1,6 @@
 # skill 방향의 출발점
 
-갱신 2026-10-11 · 상태: 아래 어긋나는 점 1~10번과 나중에 남은 질문(Q11~Q16)을 모두 정했다. 어떻게 정했는지는 [정한 내용](#decisions)에 요약했다. 이 결정들을 반영해 [skill-plugin/](skill-plugin/README.md)을 영어 정본으로 다시 썼고, 2026-10-11에 인터뷰 원문, 원래 구상, 보관 문서, 코드와 한 번 더 대조해 고쳤다.
+갱신 2026-10-16 · 상태: 아래 어긋나는 점 1~10번과 그 뒤에 남은 질문(Q11~Q24)을 모두 정했다. Q16까지는 [정한 내용](#decisions)에 요약했고, 2026-10-12에 정한 Q17~Q24는 [구현 준비 점검 기록](readiness-2026-10-12.md)에 정리했다. 이 결정들을 모두 [skill-plugin/](skill-plugin/README.md) 영어 정본에 반영했다. 정본은 2026-10-08에 다시 썼고, 2026-10-11에 한 번 더 고쳤으며, 2026-10-13~16에 Q17~Q24를 반영해 개정했다.
 
 > **제품 이름:** 2026-10-06에 **Barrel**로 정했다([Q09](interview/q09-slack-and-dashboard.md)). Python 패키지 이름도 `barrel/`이다.
 
@@ -30,7 +30,7 @@
 | --- | --- |
 | [00-original-flow.md](00-original-flow.md) | 원래 구상한 제품 흐름(0~12번). 2026-10-06에 사용자가 고쳤다. 두 CLI 모두에 skill로 배포하고, 어려운 판단은 Claude Fable이나 GPT Astra에게 묻고, 구현은 Opus 5.5가 맡는다. 1번 아래에 맥락 관리 규칙이 추가됐고, 11번에 Slack MCP 연동이 명시됐다. |
 | [insight.md](insight.md) | 작업을 주제 트리로 나누는 방법, 최소 단위 맥락과 상호 참조, 작업마다 필요한 맥락만 주는 원칙, 맥락 충돌을 작업 전에 정리하는 원칙, 문서를 영어로 먼저 쓰고 따로 번역하는 지침 |
-| [skill-plugin/](skill-plugin/README.md) | 설계 정본(영어, 2026-10-08, 2026-10-11 점검). 인터뷰 Q01~Q16으로 정한 내용을 반영해 다시 썼다. 2026-09-29 초안 9개는 [보관 문서](../archive/skill-plugin-2026-09-29/README.md)로 옮겼고, 아래 [어긋나는 점](#conflicts) 표의 링크는 그 보관본을 가리킨다. |
+| [skill-plugin/](skill-plugin/README.md) | 설계 정본(영어). 2026-10-08에 인터뷰 Q01~Q16으로 정한 내용을 반영해 다시 썼고, 2026-10-13~16에 Q17~Q24와 두 차례 구현 준비 점검 결과를 반영해 개정했다. 2026-09-29 초안 9개는 [보관 문서](../archive/skill-plugin-2026-09-29/README.md)로 옮겼고, 아래 [어긋나는 점](#conflicts) 표의 링크는 그 보관본을 가리킨다. |
 
 main에 남은 코드 가운데 새 방향이 기반으로 삼을 수 있는 것은 두 가지다. `step2step`은 `-p` 없이 대화형 Claude Code 세션을 PTY로 새로 띄우고 Codex는 app-server로 구동한다. unit loop(`barrel/core/unitloop.py`, `orchestration/drivers/unit_loop.py`)는 유닛마다 새 세션을 하나씩 맡기고 게이트로 판정한다.
 
@@ -139,4 +139,7 @@ main에 남은 코드 가운데 새 방향이 기반으로 삼을 수 있는 것
 3. ~~정한 내용으로 skill-plugin/을 개정해 새 정본으로 삼는다.~~ 2026-10-08에 [skill-plugin/](skill-plugin/README.md)을 영어 정본으로 다시 썼다([Q08](interview/q08-korean-docs.md)). 이번에는 한국어판을 만들지 않았다.
    - 2026-10-11에 한 번 더 점검했다. 인터뷰 답과 어긋난 두 곳(Q02, Q05)을 바로잡고, 흐름이 실제로 돌아가는 데 필요한 빈 곳을 채웠다.
    - 새로 채운 기본값과 이어받지 않은 보관 결정은 [open-decisions.md](skill-plugin/open-decisions.md)에 검토 대상으로 적었다.
-4. [validation.md](skill-plugin/validation.md)의 spike를 실행한다. 인터뷰 중에 모은 항목과 정본을 쓰며 더한 항목을 모두 이 문서에 모았다.
+4. ~~2026-10-12에 정한 Q17~Q24를 정본에 반영한다.~~ 2026-10-13~16에 반영했다.
+   - [구현 준비 점검 기록](readiness-2026-10-12.md)의 항목이 정본의 어디에 들어갔는지는 [migration.md](skill-plugin/migration.md#readiness)에 있다.
+   - 예전 계획의 결정 93개도 모두 [migration.md](skill-plugin/migration.md#archived)에서 반영한 곳이나 이어받지 않은 이유를 찾을 수 있다.
+5. [validation.md](skill-plugin/validation.md)의 spike를 실행한다. 인터뷰 중에 모은 항목과 정본을 쓰며 더한 항목을 모두 이 문서에 모았다.

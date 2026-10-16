@@ -1,6 +1,6 @@
 # Readiness check, 2026-10-12
 
-Status: the user's decisions are complete. Everything below waits for the next revision of [skill-plugin/](skill-plugin/README.md), which happens when the user asks. This file is in English because it is a session-to-session document ([Q08](interview/q08-korean-docs.md)).
+Status: applied. [skill-plugin/](skill-plugin/README.md) was revised with everything below from 2026-10-13 to 2026-10-16, at the user's request; [migration.md](skill-plugin/migration.md#readiness) maps each item to its place. Line numbers of `skill-plugin/` files cited in this file and in the Q17–Q24 records refer to the docs before that revision, at `5c15481`. This file is in English because it is a session-to-session document ([Q08](interview/q08-korean-docs.md)).
 
 ## Why this file exists
 
@@ -280,7 +280,7 @@ Answered in [Q23](interview/q23-spike-inputs.md):
 
 ## Next step
 
-1. When the user asks, revise `skill-plugin/` with everything above:
+1. ~~When the user asks, revise `skill-plugin/` with everything above:~~ Done from 2026-10-13 to 2026-10-16:
    - the restored decisions, Q17-2, Q18–Q21, the gaps, the fallbacks, and the doc errors
    - Q22-2 and the additions from the [second check](#second)
    - [Q24](#q24): the memory queue and memory updates at the end of every session

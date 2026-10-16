@@ -9,7 +9,7 @@
 | [README.md](plan/README.md) | 이번 방향을 정한 요청 원문, 2026-09-29 초안과 어긋나는 점, 다음 단계 |
 | [00-original-flow.md](plan/00-original-flow.md) | 원래 구상한 제품 흐름(0~12번) |
 | [insight.md](plan/insight.md) | 작업 분할과 맥락 관리 원칙, 한국어 문서 작성 지침 |
-| [skill-plugin/](plan/skill-plugin/README.md) | Barrel 설계 정본(영어, 2026-10-08, 2026-10-11 점검). 2026-09-29 초안은 [archive/](archive/README.md)로 옮겼다. |
+| [skill-plugin/](plan/skill-plugin/README.md) | Barrel 설계 정본(영어). 2026-10-13~16에 인터뷰 Q17~Q24를 반영해 개정했다. 2026-09-29 초안은 [archive/](archive/README.md)로 옮겼다. |
 
 ## 실행 층 (step2step, unit loop)
 

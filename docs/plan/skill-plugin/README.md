@@ -1,10 +1,10 @@
 # Barrel design
 
-Updated 2026-10-13. Status: canonical design, not implemented yet. Written in English because English is canonical ([Q08](../interview/q08-korean-docs.md)).
+Updated 2026-10-16. Status: canonical design, not implemented yet. Written in English because English is canonical ([Q08](../interview/q08-korean-docs.md)).
 
 This folder is the design Barrel is built from. It replaces the 2026-09-29 draft, which is archived in [docs/archive/skill-plugin-2026-09-29](../../archive/skill-plugin-2026-09-29/README.md).
 - It was rewritten on 2026-10-08 from interview answers Q01–Q16, and checked again on 2026-10-11 against the verbatim answers, the original flow, the archived drafts and the code.
-- On 2026-10-13 it was revised with everything decided on 2026-10-12:
+- From 2026-10-13 to 2026-10-16 it was revised with everything decided on 2026-10-12, and then checked by three independent reviews against the verbatim answers, the archived decisions and the code:
   - interview answers Q17–Q24
   - the gaps, spike fallbacks and doc errors that the two readiness checks found ([readiness-2026-10-12.md](../readiness-2026-10-12.md))
 

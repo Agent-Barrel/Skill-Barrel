@@ -1,6 +1,6 @@
 # Session context for Barrel design work
 
-Updated 2026-10-12 (two readiness checks, Q17–Q24, move to [Agent-Barrel/Skill-Barrel](https://github.com/Agent-Barrel/Skill-Barrel))
+Updated 2026-10-16 (skill-plugin/ revised with Q17–Q24; earlier: two readiness checks on 2026-10-12, move to [Agent-Barrel/Skill-Barrel](https://github.com/Agent-Barrel/Skill-Barrel))
 
 This file holds what a fresh Claude Code or Codex session needs, beyond [README.md](README.md), [interview/](interview/README.md) and the canonical design in [skill-plugin/](skill-plugin/README.md), to continue Barrel's work. Before this file existed, most of it lived only in one session's conversation and in that session's CLI memory. CLI memory is per machine and per account, so other sessions can't see it. It is written in English because it is a session-to-session document ([Q08](interview/q08-korean-docs.md)).
 
@@ -14,8 +14,8 @@ If this file and an interview answer disagree, the verbatim interview answer win
 4. [skill-plugin/](skill-plugin/README.md): the canonical design, in English, now 16 docs. Start with its README.
    - It was rewritten on 2026-10-08 from Q01–Q16.
    - It was checked again on 2026-10-11 against the verbatim answers, the original flow, the archived drafts and the code. That pass fixed two contradictions with Q02 and Q05, filled the gaps the flow needs, and added [runs.md](skill-plugin/runs.md).
+   - It was revised from 2026-10-13 to 2026-10-16 with Q17–Q24 and every item of [readiness-2026-10-12.md](readiness-2026-10-12.md), then checked by three independent reviews whose findings were applied. [migration.md](skill-plugin/migration.md#readiness) maps each readiness item, and [migration.md](skill-plugin/migration.md#archived) maps all 93 archived decisions.
    - Every statement in it carries a source tag, and the verbatim interview answers win over it.
-   - Q17–Q24 (2026-10-12) are not in it yet. Read [readiness-2026-10-12.md](readiness-2026-10-12.md) before relying on it.
 5. [00-original-flow.md](00-original-flow.md) and [insight.md](insight.md).
 6. [ci-test-redundancy.md](ci-test-redundancy.md) (Korean): when a test or a CI job adds nothing, and how to judge it. Check it before adding tests or CI.
 
@@ -94,21 +94,19 @@ None.
 - The user asked again the same day. The second check asked Q22 and Q22-2, and both kept the current design. Q23 collected the spike inputs.
 - Then the user gave Q24 unasked: keep memory current after every session, through a queue with one writer at a time. The user chose the AI's four additions.
 
-**Pending revision.** None of the 2026-10-12 results are in `skill-plugin/` yet. [readiness-2026-10-12.md](readiness-2026-10-12.md) lists what the next revision must change:
+**The revision is done** (2026-10-13 to 2026-10-16, at the user's request). Everything [readiness-2026-10-12.md](readiness-2026-10-12.md) listed is now in `skill-plugin/`:
 - the restored decisions, Q17-2 and Q18–Q21
-- 18 gaps the AI fills
-- fallbacks for 9 spike items
-- 7 doc errors
+- the 18 gaps the AI fills, the fallbacks for 9 spike items, and the 7 doc errors
 - Q22-2 and the second check's additions: archived D-016, Q-002 and Q-020, and a login fallback for restored decision 5
 - Q24: the memory queue, memory updates at the end of every session, and memory units in the parallel rule
 
+The next step is the spike in [skill-plugin/validation.md](skill-plugin/validation.md), with the inputs Q23 gave.
+
 **Q23 names:** the Q23 answer named a Slack workspace and a person verbatim. The repository is public, so on 2026-10-13 the user chose to mask both, as `[워크스페이스 이름]` and `[사용자 이름]` ([Q23](interview/q23-spike-inputs.md#mask)). The real values are kept outside the repo, in this Mac's CLI memory. Never write them into a repo file.
 
-The revision happens when the user asks.
-
 The two lists in [skill-plugin/open-decisions.md](skill-plugin/open-decisions.md):
-- [AI defaults](skill-plugin/open-decisions.md#ai-defaults): details the AI filled in. Items 1–22 are from 2026-10-08, and the rest from 2026-10-11. They still wait for the user's review. Q18 replaces part of item 35.
-- [Not carried](skill-plugin/open-decisions.md#not-carried): Q17 brought back multi-repo projects, preferences shared across projects and cancelling a run. The list is rewritten in the revision.
+- [AI defaults](skill-plugin/open-decisions.md#ai-defaults): details the AI filled in. Items 1–22 are from 2026-10-08, 23–40 from 2026-10-11, 41–59 from the 2026-10-13 revision, and 60–69 from its review. They still wait for the user's review. Items that later answers replaced, such as 2, 8, 22, 33 and 35, say so.
+- [Not carried](skill-plugin/open-decisions.md#not-carried): rewritten in the revision. Only archived decisions, or parts of them, that a later answer replaces or that belong to the desktop app are left out, each with its reason.
 
 ## 6. Repository facts
 
@@ -124,14 +122,15 @@ The two lists in [skill-plugin/open-decisions.md](skill-plugin/open-decisions.md
 - **Code facts.** The reuse and gap map of `step2step/` and the unit loop, with line references, is in [skill-plugin/launcher.md](skill-plugin/launcher.md#reuse). A summary is in [skill-plugin/research.md](skill-plugin/research.md#code). Corrections to earlier notes:
   - `SessionHandle.send` does not exist; the API is `send_prompt`, `wait_turn` and `run_turn`.
   - Current line numbers: `child_env()` is `step2step/claude/runner.py:153-163`, `Notifier` is `barrel/core/unitloop.py:327-368`, `RunState` is `:373-423`, the stop files are `:464-469`.
+  - Every code reference in `skill-plugin/` was checked against main at `5c15481` on 2026-10-13 and again on 2026-10-16; the code has not changed since.
 - **Name.** The product is Barrel, and the Python package is `barrel/`.
   - The user asked on 2026-10-12 that the previous product name appear in no file of the repo ([Q17-2](interview/q17-2-repo-list-config-and-updates.md)). Never write it, not even in a quote: verbatim answers that contained it show `[이전 이름]` instead.
   - By the user's choice, only the files on the main line were cleaned. The `archive/tauri-desktop-app` branch and past commits, both in the previous repository, still contain the name, so paths on that branch can differ from the paths the archived docs give.
   - Docs name the previous repository's branches and paths instead of linking its URLs.
-- **Environment (2026-10-11).**
-  - Versions: Claude Code 2.1.296, codex-cli 0.155.1, uv 0.11.19, macOS (Darwin 24.6).
-    - Claude Code updates itself; it was 2.1.292 on 2026-10-08.
-    - codex-cli 0.162.1 was released on 2026-10-09 but is not installed.
+- **Environment (2026-10-16).**
+  - Versions: Claude Code 2.1.301, codex-cli 0.162.1, uv 0.11.19, macOS 15.7.5 (Darwin 24.6).
+    - Claude Code updates itself; it was 2.1.292 on 2026-10-08 and 2.1.296 on 2026-10-11.
+    - codex-cli was 0.155.1 on 2026-10-11 and 0.162.1 by 2026-10-13.
   - Accounts: `~/.claude`, `~/.claude-wook`, `~/.codex`.
   - Python: the system `python3` is 3.9, but the repo needs 3.12 or later. Python 3.13 is at `/opt/anaconda3/bin/python3.13`, and there is no `.venv`.
   - `step2step` screen calibration was last done at Claude Code 2.1.272.
