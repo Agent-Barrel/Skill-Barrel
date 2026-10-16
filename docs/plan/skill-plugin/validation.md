@@ -55,7 +55,7 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
 
    If either fails, use the launchd fallback (§8.1, Q11). Then check that the job:
    - is bootstrapped from `~/.barrel/launchd/`
-   - restarts after a crash
+   - does not restart on its own after a crash, and waits like a detached launcher
    - is not listed as a login item
    - does not start after a reboot (Q22-2; [launcher.md](launcher.md#process))
 2. step2step's screen calibration still holds at the installed versions, Claude Code 2.1.301 and codex-cli 0.162.1 on 2026-10-16 (§8.2). Run `python -m step2step.claude.calibrate_dialogs <dir> --answer`.
@@ -130,6 +130,7 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
 30. **Recovery.** Kill the launcher with `kill -9` during a merge, again during a memory turn, and again during a Slack post. Then, with the launcher down, answer a question and write "재개" in the channel. After the restart:
     - nothing is merged or posted twice
     - the interrupted memory turn is done again, and nothing it half-wrote is committed
+    - a leaf whose merge was committed just before the kill gets its memory update before its `task_done`
     - no old process keeps running
     - the answer and the command sent during the downtime are processed
 
@@ -142,7 +143,7 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
 33. **Sleep.** With the sleep policy `ac`, a run keeps going overnight on power with the display off. With `os`, macOS sleeps as usual. The Slack words "절전 os|ac|always" change the policy ([launcher.md](launcher.md#sleep)).
 34. **CLI updates** (Q17-2, Q21). A Claude Code update under a running launcher is handled:
     - If the calibration check fails, Barrel checks for its own update at once.
-    - If no update fixes it, that CLI drops out and the "calibration failed" request is posted ([launcher.md](launcher.md#versions)).
+    - If no update fixes it, that CLI drops out, and the "calibration failed" notice is posted without a mention ([launcher.md](launcher.md#versions)).
 
 **Execution**
 
@@ -163,7 +164,7 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
 42. **Long runs and delivery.**
     - A run longer than 24 hours keeps going, with no run-wide clock.
     - At the end, delivery happens in every repo the run changed, as `git.delivery` says, and the integration worktrees are removed so the user can check out the run branches ([runs.md](runs.md#after)).
-    - `merge` into the base the user has checked out goes through the remote. Without a remote, the user is asked to merge, and the run completes once the base contains the run branch. The user's checkout is never touched ([runs.md](runs.md#merge), [#waiting](runs.md#waiting)).
+    - `merge` into the base the user has checked out goes through the remote. Without a remote, a developer is asked to merge, and the run completes once the base contains the run branch; a developer's checkout is never touched. For a non-developer, the launcher merges there itself (item 71) ([runs.md](runs.md#merge), [#waiting](runs.md#waiting)).
     - A pull request merged by squash completes the delivery. A pull request closed without a merge is asked about.
     - The final report, with its completion mention, is posted only when delivery is done.
     - A base that moved with a conflicting change produces a conflict leaf. The leaf resolves the conflict by editing files, and the launcher completes the merge.
@@ -196,12 +197,14 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
     - a folder that is not a repo
 48. **Two runs of one project** (Q18).
     - Two requests run side by side, with their own branches, task trees and orchestrators, and share the lanes in turn.
+    - The in-progress list covers both runs, and the memory-unit rule keeps a leaf of one run that changes a unit away from a leaf of the other that reads it.
     - Every message carries its request name.
     - A thread reply reaches its run, and a channel post with two runs active is asked with buttons.
     - Stop and resume cover both runs.
     - The later delivery merges the earlier run's result, and a conflicting decision is asked.
 49. **Cancel** (archived Q-009).
     - Cancelling one of two runs leaves the other running.
+    - The cancelled run's interrupted leaves are saved as patches before any lane is reset, and the keep-or-discard post lists them.
     - Keep leaves the run branches, which are never merged automatically.
     - Discard deletes the branches and the worktrees.
     - The user's own changes stay untouched either way.
@@ -217,13 +220,15 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
     - An archived project disappears from Barrel.app and the PC view, and comes back when reopened.
     - Removal deletes the run state and the worktrees, and leaves the repos, `.barrel/` and the remotes alone.
     - Shared experience loses that project's specifics.
-54. **The launcher exits when idle.** When no project has a running, stopped or waiting run, the launcher exits. The skill, Barrel.app or a `barrel` command starts it again (Q22-2; AI).
+54. **The launcher exits when idle.** When no project has a running, stopped or waiting run, nor a cancel waiting for keep or discard, the launcher exits. The skill, Barrel.app or a `barrel` command starts it again (Q22-2; AI).
 
 **Secrets and administrator rights** (Q20)
 
 55. **The credential dialog.**
     - A launcher running detached, and one running as a launchd job, opens the native macOS dialog on the Mac, with hidden input.
     - The value lands in the Keychain, and the session gets only its name.
+    - `barrel secret run` hands a value to one command, and `barrel secret capture` stores a created key, with neither value appearing in the session's transcript.
+    - The Slack tokens at setup go through the same dialog.
 56. **The sudo tool.**
     - `barrel-sudo -- <command>` runs without a prompt through `sudo -S`, and a nested sudo works through `SUDO_ASKPASS`.
     - The password never appears in a transcript, a log, an event, a unit or a Slack message.
@@ -234,7 +239,7 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
     - Only the tool can read the password's item; another program triggers macOS's prompt.
     - After an update, re-signed with the local identity, the tool still reads it without a prompt.
     - If not, the "save the sudo password" request appears.
-58. **Subscriptions only.** A Claude account that is logged in with an API key is left out at setup, and no session ever uses API billing ([sessions.md](sessions.md#paid)).
+58. **Subscriptions only.** A Claude account that is logged in with an API key is left out at setup, and no session ever uses API billing ([sessions.md](sessions.md#paid)). Paid usage stays off until the user turns it on with a monthly budget; in strict mode, a paid step stops before the budget would be exceeded.
 59. **Windows** (later, after macOS). The same `barrel-sudo` command works on Windows through a scheduled task that runs with the highest privileges, or the spike finds another path (Q20).
 
 **Updates, people and the Mac**
@@ -265,6 +270,13 @@ Items marked §8.n come from [session-context.md](../session-context.md) §8. Q1
     - Computer use runs only inside a time window the user agreed to.
     - It stops when the user ends the window, or when the launcher sees the user using the Mac.
     - If computer use is unavailable, Playwright is used, and a step that still fails becomes a request.
+
+69. **Refusals** (archived D-041). A session's refusal goes to the orchestrator and is never retried on another model or engine.
+70. **Across projects** (archived D-032). Two projects' leaves that need the same port or database never run together, and every running leaf gets its own `BARREL_PORT`.
+71. **A non-developer's local merge** (archived Q-001, Q-002). Without a remote or GitHub, the launcher merges into the base in the user's checkout itself, and only when that leaves the user's uncommitted changes untouched.
+72. **Approved tools** (archived Q-008; Q19). A tool confirmed in S6 is installed by the launcher from `env.tools`, through `barrel-sudo` when needed, and a task session's own install attempt is denied.
+73. **New failures in a failing check** (archived Q-005). A test that starts failing inside a check that already failed at baseline is caught as the run's own failure.
+74. **Git and gh at setup** (archived Q-008). On a Mac without `git` or `gh`, setup installs them, and reuses compatible versions when they exist.
 
 §8.8 (`claude --bg`) is dropped: the launcher drives Claude through step2step, and `--bg` is optional (Q04-2).
 
@@ -333,5 +345,5 @@ No leaf may complete without its gates (09-29 draft).
 ## After the spike
 
 - **Pass:** build the full design on top of the thin slices. Follow the order [launcher.md](launcher.md#reuse) implies: the launcher process, the memory queue and session ownership first, then the task runner, then Slack and the PC view.
-- **Partial pass:** decide with the user what to ship first. Example: if only the Codex orchestrator fails, Claude orchestrators could run while it is fixed.
+- **Partial pass:** when one engine or one item fails, the spike has not passed, because Q04 puts both CLIs in the pass criteria ("클로드 코덱스 모두 사용 가능한게 목표야", Q04-2). The failing part is fixed and checked again before the full build.
 - **Fail:** record the causes and revisit the launcher design. The decisions in the interview stay as they are.

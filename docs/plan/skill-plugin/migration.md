@@ -19,7 +19,7 @@ Use it to check that nothing was dropped by accident. The 2026-10-11 review adde
 | --- | --- | --- | --- |
 | 0 | A skill for both CLIs; Fable or Astra advise on hard questions; Opus 5.5 implements; research combines both CLIs' findings; mixed use | [README](README.md#principles) principle 7, [sessions.md](sessions.md#engines) | Q04 and Q04-2: both CLIs, including as orchestrator. Q16: engines are interchangeable. The model examples became defaults in `.barrel/config.json` (Q12). Research is cross-checked by a separate verification pass, not by splitting it across providers (Q16) |
 | 1 | Find the CLIs on the PC; use every subscription through per-account folders (config dir, `CODEX_HOME`); ask for account names | [workflow.md](workflow.md#stages) S0, [sessions.md](sessions.md#accounts), [plugin.md](plugin.md#setup) | Q05, Q12. (10-11) Setup asks once for other subscriptions. (10-13) Sessions run from Barrel-managed config folders named by the account, which reuse each account's login (archived D-048; Q17-2) |
-| 1-1 | Shared memory that depends on no CLI, account or session; understand the whole context before working | [memory.md](memory.md) | Q07. (10-13) Every session updates the memory before it ends, through a queue (Q24). Personal settings the user picks become shared preferences, so every engine sees the same context, and project instructions such as `CLAUDE.md` become units ([workflow.md](workflow.md#onboarding)) |
+| 1-1 | Shared memory that depends on no CLI, account or session; understand the whole context before working | [memory.md](memory.md) | Q07. (10-13) Every session updates the memory before it ends, through a queue (Q24). Personal instructions and memory the user picks load into Barrel's sessions on both engines, so no engine knows more than another, and project instructions such as `CLAUDE.md` become units ([workflow.md](workflow.md#onboarding)) |
 | 1-2 | Start from the coarse picture; minimal linked units; refine the plan by following links | [memory.md](memory.md#loop), [task-tree.md](task-tree.md#split) | Q06, Q07 |
 | 1-3 | Give each split task only the context it needs | [memory.md](memory.md#context), [task-execution.md](task-execution.md#lifecycle) | insight. (10-13) A hook keeps task sessions from reading the rest of memory outside their memory turn |
 | 1-4 | Settle conflicts between contexts before the work | [memory.md](memory.md#loop), README principle 6 | insight. (10-11) Each settlement is recorded as a `decision` unit |
@@ -46,7 +46,7 @@ Use it to check that nothing was dropped by accident. The 2026-10-11 review adde
 | [Q04](../interview/q04-target-cli.md), [Q04-2](../interview/q04-2-orchestrator-on-both-cli.md) | Both CLIs from the start, orchestrators included; one launcher built on step2step | [launcher.md](launcher.md), [plugin.md](plugin.md) |
 | [Q05](../interview/q05-accounts.md) | Use the registered accounts, set them up if missing, move to the next account | [sessions.md](sessions.md#accounts) |
 | [Q06](../interview/q06-task-tree.md) | Two levels reviewed, leaves split when their turn comes; ask only when the specs cannot settle it | [task-tree.md](task-tree.md) |
-| [Q07](../interview/q07-shared-memory.md) | Memory in the repo, one unit per file, indexes, verbatim answers as units | [memory.md](memory.md). (10-11) Answer units are written by the launcher. (10-13) In a project of several repos, "the repo" is the planning repo (Q17) |
+| [Q07](../interview/q07-shared-memory.md) | Memory in the repo, one unit per file, indexes, verbatim answers as units | [memory.md](memory.md). (10-11) Answer units are written by the launcher. The indexes are generated from the units and kept out of git, so merges never conflict; the units themselves are tracked (AI default 8). (10-13) In a project of several repos, "the repo" is the planning repo (Q17) |
 | [Q08](../interview/q08-korean-docs.md) | English canonical; Korean for people through Skill-Techblog | [interviews.md](interviews.md#language), [slack.md](slack.md#language) |
 | [Q09](../interview/q09-slack-and-dashboard.md) | A dedicated bot plus the official MCP for reading; renamed Barrel | [slack.md](slack.md#setup) |
 | [Q10](../interview/q10-slack-progress-reports.md), [Q10-2](../interview/q10-2-pc-view-stop-language.md), [confirmed](../interview/q10-confirmed.md) | Slack reports, snapshots, questions, reminders, language; the PC view; stop and resume | [slack.md](slack.md), [pc-view.md](pc-view.md), [launcher.md](launcher.md#stop) |
@@ -168,7 +168,7 @@ Decisions that Q17 restored, or that the second readiness check added, are tagge
 | D-009 | Shared items can be edited and deleted | A | [memory.md](memory.md#shared) (Q17) |
 | D-010 | Three approval bundles | Replaced | The S5 and S6 reviews (Q01, Q06, Q13); its wireframes and design are in [workflow.md](workflow.md#design) (Q17) |
 | D-011 | Research per decision topic, reused for follow-ups | P | [interviews.md](interviews.md#before) |
-| D-012 | Paid usage only with explicit permission and a monthly budget | Part | [sessions.md](sessions.md#paid) (Q17) |
+| D-012 | Paid usage only with explicit permission and a monthly budget | A | Off by default; only the user turns it on ([sessions.md](sessions.md#paid)) (Q17) |
 | D-013 | The environment, action and cost scope is delegated per project | A | [interviews.md](interviews.md#stack), [task-execution.md](task-execution.md#user-only) |
 | D-014 | Slack is optional | Not carried | Q10 |
 | D-015 | Role presets whose model and effort the user can change | P | `.barrel/config.json` ([sessions.md](sessions.md#engines)) (Q12) |
@@ -178,7 +178,7 @@ Decisions that Q17 restored, or that the second readiness check added, are tagge
 | D-019 | Specs as CSV | Not carried | Q07 |
 | D-020 | Direct edits are reviewed, and a resolution is asked | A | [workflow.md](workflow.md#edits) (Q17) |
 | D-021 | The 2026-09-18 requirements baseline was approved | Record | History |
-| D-022 | Quality-first roles and efforts | Part | Tiers and efforts by difficulty ([sessions.md](sessions.md#engines)); the provider picks are replaced by Q16 |
+| D-022 | Quality-first roles and efforts | Part | Max effort for coordination, planning and synthesis ([sessions.md](sessions.md#roles)); the provider picks are replaced by Q16's tiers |
 | D-023 | A Slack thread per request, with the project shown | Part | The request name on every message ([slack.md](slack.md#what)) (Q18); the layout follows Q09 |
 | D-024 | Automatic completion after verified acceptance; completion includes delivery | P | [task-execution.md](task-execution.md#acceptance), [runs.md](runs.md#delivery) |
 | D-025 | Screen control only with an explained scope and an agreed time window | A | [task-execution.md](task-execution.md#user-only) (Q17) |
@@ -187,17 +187,17 @@ Decisions that Q17 restored, or that the second readiness check added, are tagge
 | D-028 | A built-in console and a central console | Not carried | Desktop app |
 | D-029 | One Mac runs every project; other devices view through the console | Part | One launcher per PC ([launcher.md](launcher.md)) (Q11); the console is not carried |
 | D-030 | Explicit preferences and verified successes accumulate; inferred ones stay candidates; project decisions win | A | [memory.md](memory.md#shared) (Q17) |
-| D-031 | A change applies from the next task or stops the affected work now; a default can be set | A | [workflow.md](workflow.md#cascade) (Q17) |
-| D-032 | Parallel only when reads and writes are disjoint; reference changes before the work that reads them | P | [task-execution.md](task-execution.md#lanes), with memory units (Q24) |
-| D-033 | Strict or estimate budget modes; extra spending off by default | Part | [sessions.md](sessions.md#paid) (Q17) |
-| D-034 | A pre-assessment of size, complexity, impact and context | Part | [workflow.md](workflow.md#depth); its model pick is replaced by Q16 |
+| D-031 | A change applies from the next task or stops the affected work now; a default can be set; a resumed or moved task keeps its approvals, permissions and costs | A | [workflow.md](workflow.md#cascade), [task-execution.md](task-execution.md#stop) (Q17) |
+| D-032 | Parallel only when reads and writes are disjoint; reference changes before the work that reads them; judged by dependencies, not by project boundaries | P | [task-execution.md](task-execution.md#lanes), with memory units (Q24) and resources across projects |
+| D-033 | Strict or estimate budget modes; extra spending off by default | A | [sessions.md](sessions.md#paid) (Q17) |
+| D-034 | A pre-assessment of size, complexity, impact and context, at medium effort | Part | [workflow.md](workflow.md#stages) S2 and [#depth](workflow.md#depth), with the survey at medium effort; its model pick is replaced by Q16 |
 | D-035 | No product accounts or billing | P | Holds: the skill has no accounts of its own |
 | D-036 | Rust/Tauri with React | Not carried | 2026-10-06 request |
 | D-037 | Reuse what has general value; keep the existing data; analyze existing repos as maintenance input | A | [launcher.md](launcher.md#reuse), [workflow.md](workflow.md#onboarding) |
-| D-038 | The relay keeps undelivered Slack messages for seven days | Not carried | Desktop app; Q10's outage rule covers it |
+| D-038 | The relay keeps undelivered Slack messages for seven days | Not carried | Desktop app; the launcher catches up on the channel instead ([launcher.md](launcher.md#recovery)) |
 | D-039 | Maintenance keeps the user's changes; developers choose the start | A | [runs.md](runs.md#start-state) (Q17) |
 | D-040 | Re-examine and try alternatives; no fixed retry count | P | [task-execution.md](task-execution.md#failures); lessons recorded (Q24) |
-| D-041 | Method changes within the approved scope; ask before changing a mandated method | P | [task-execution.md](task-execution.md#failures), [workflow.md](workflow.md#new-technology) |
+| D-041 | Method changes within the approved scope; ask before changing a mandated method; never route around a refusal or a permission limit | P | [task-execution.md](task-execution.md#failures), [workflow.md](workflow.md#new-technology), [sessions.md](sessions.md#escalation) |
 | D-042 | Minimal experiments before approval | A | [workflow.md](workflow.md#experiments) (Q17) |
 | D-043 | Only the registered user's Slack account, confirmed from the Mac | A | [slack.md](slack.md#setup), [#security](slack.md#security) |
 | D-044 | Slack edits and deletions, before and after acceptance | A | [interviews.md](interviews.md#replies) (Q17) |
@@ -206,8 +206,8 @@ Decisions that Q17 restored, or that the second readiness check added, are tagge
 | D-047 | The sleep policy, changeable from Slack | A | [launcher.md](launcher.md#sleep), [slack.md](slack.md#commands) (Q17) |
 | D-048 | A Barrel-managed CLI environment; personal settings picked from a list; project instructions in the assessment; the loaded configuration recorded | A | [sessions.md](sessions.md#barrel-folders), [plugin.md](plugin.md#setup), [workflow.md](workflow.md#onboarding) (Q17, Q17-2) |
 | D-049 | A verified official CLI kept separately | Replaced | Self-update ([launcher.md](launcher.md#versions)) (Q17-2, Q21) |
-| D-050 | Monthly accounting of paid credits | Not carried | Paid usage is off |
-| D-051 | In-house and tester distribution | A | The public repo as the marketplace ([plugin.md](plugin.md#layout)) (Q17-2) |
+| D-050 | Monthly accounting of paid credits | A | Applies when the user turns paid usage on ([sessions.md](sessions.md#paid)) (Q17) |
+| D-051 | In-house and tester distribution | A | The public repo as the marketplace ([plugin.md](plugin.md#layout)) (Q17, Q17-2) |
 | D-052 | Deploying the central service | Not carried | Desktop app |
 | D-053 | An EC2 machine for that deployment | Not carried | Desktop app |
 | D-054 | Apple Silicon, macOS 15 or later | P | [README](README.md#what-barrel-is) (Q17) |
@@ -223,19 +223,19 @@ Decisions that Q17 restored, or that the second readiness check added, are tagge
 | D-064 | The Tauri updater | Not carried | Desktop app; Q21 covers updates |
 | D-065 | Documents are updated after each answer | P | [interviews.md](interviews.md#recording) |
 | D-066 | One plan for the updater | Not carried | Desktop app |
-| D-067 | Tier corrections; medium effort for the intent check | Part | The intent check's medium effort ([sessions.md](sessions.md#roles)); the provider tiers are replaced by Q16 |
-| D-068 | Efficient models for small, clear tasks | P | [sessions.md](sessions.md#difficulty) |
-| D-069 | Flexible outside integrations through MCP and delegation | A | [task-execution.md](task-execution.md#user-only); Barrel's own Slack posts stay with the bot (Q17) |
+| D-067 | Tier corrections; max effort for high-quality coordination; medium effort for the intent check | Part | Both efforts ([sessions.md](sessions.md#roles)); the provider tiers are replaced by Q16 |
+| D-068 | Efficient models for small, clear tasks; an optional routing aid | Part | [sessions.md](sessions.md#difficulty); the optional Jev aid is not carried ([open-decisions.md](open-decisions.md#not-carried)) |
+| D-069 | Flexible outside integrations through MCP and delegation | Part | [task-execution.md](task-execution.md#user-only) (Q17); sending Barrel's Slack messages through the MCP is replaced by Q09 and Q10 |
 | P-001 | Small tasks, accurate source documents, a plan check before execution | P | [task-tree.md](task-tree.md), [task-execution.md](task-execution.md#lifecycle) |
 | P-002 | The wireframe workflow; formats and tools are implementation choices | A | [workflow.md](workflow.md#design) (Q17) |
-| Q-001 | The Git delivery scope per project; non-developers merge automatically | A | [runs.md](runs.md#delivery), [interviews.md](interviews.md#stack) (Q17) |
+| Q-001 | The Git delivery scope per project; non-developers merge automatically | A | [runs.md](runs.md#delivery), [#merge](runs.md#merge), [interviews.md](interviews.md#stack) (Q17) |
 | Q-002 | Connecting GitHub is recommended and can be skipped | A | [plugin.md](plugin.md#setup), [runs.md](runs.md#delivery) (2nd check) |
 | Q-003 | Non-developers' new projects saved to private GitHub repositories, chosen once | A | [plugin.md](plugin.md#setup), [runs.md](runs.md#delivery) |
 | Q-004 | Independent review by risk | P | [task-execution.md](task-execution.md#review) |
-| Q-005 | Pre-existing failures are asked each time | P | [task-execution.md](task-execution.md#pre-existing) |
+| Q-005 | Pre-existing failures are asked each time; new or worse failures are fixed | P | [task-execution.md](task-execution.md#pre-existing), compared per failure |
 | Q-006 | A CLI's own subagents are left to it | P | [sessions.md](sessions.md#roles) (Q17) |
 | Q-007 | Resume after a crash or an OS restart; a user stop stays stopped | A | [launcher.md](launcher.md#process), [#recovery](launcher.md#recovery); never at login (Q22-2) |
-| Q-008 | Needed tools are installed after approval; existing ones are reused | A | [task-execution.md](task-execution.md#user-only), [interviews.md](interviews.md#stack) |
+| Q-008 | Barrel prepares git and gh; other needed tools are installed after approval; existing ones are reused | A | [plugin.md](plugin.md#setup), [task-execution.md](task-execution.md#user-only), [interviews.md](interviews.md#stack) |
 | Q-009 | Cancelling a job offers keep or discard | A | [runs.md](runs.md#cancel) (Q17) |
 | Q-010 | Wireframes from the functional spec before the UI design; images in the design | A | [workflow.md](workflow.md#design) (Q17) |
 | Q-011 | Wireframes and design inside the existing approvals; API rules after the wireframes | A | [workflow.md](workflow.md#design), [interviews.md](interviews.md#review), [#stack](interviews.md#stack) (Q17) |
@@ -248,7 +248,7 @@ Decisions that Q17 restored, or that the second readiness check added, are tagge
 | Q-018 | Non-developers are asked about git knowledge and policy first | A | [runs.md](runs.md#start-state), [interviews.md](interviews.md#plain) (Q17) |
 | Q-019 | Any image service; modern references against AI slop | A | [workflow.md](workflow.md#design), [task-execution.md](task-execution.md#review) (Q17) |
 | Q-020 | Archiving a project, or deleting its records | A | [runs.md](runs.md#archive) (2nd check) |
-| Q-021 | Deleting a project's records keeps only generalized experience | A | [memory.md](memory.md#shared) (2nd check) |
+| Q-021 | Deleting a project's records keeps only generalized experience | A | [memory.md](memory.md#shared) (Q17) |
 
 The archived plan's routing table (`model-routing.csv`, with RTE-004 and RTE-005 splitting research by provider) is replaced by Q16.
 

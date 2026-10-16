@@ -57,7 +57,7 @@ The stage exits read the ledger, so an item cannot be forgotten between two orch
 ## Before asking
 
 1. **Check the documents.** The orchestrator looks for the answer first, in the intent, requirement, feature and decision units, and in the shared preferences ([memory.md](memory.md#shared)). It asks only when the direction cannot be inferred or a new decision is needed (Q01, Q06).
-2. **Get advice on hard questions.** When the decision is hard, an advice subagent on the frontier tier gives a second opinion. The advice shapes the options and the recommendation (flow 0, Q02, Q16).
+2. **Get advice on hard questions.** When the decision is hard, an advice subagent on the frontier tier gives a second opinion. The advice shapes the options and the recommendation (flow 0, Q16; as a subagent, AI after Q02).
 3. **Research.** A research subagent looks at (Q02, flow 5, flow 7):
    - how services in the same domain solved the same problem
    - how services in other domains solved it
@@ -93,15 +93,18 @@ The orchestrator never posts to Slack itself (Q10 default). It writes the Englis
 
 What the launcher does with it (AI):
 1. **Korean writer.** In Korean mode, it has the Korean writer turn the English source into Korean ([language](#language)).
-2. **Fixed parts.** It adds the parts that are fixed, so no model writes them:
-   - the header `[{project}-질문]`, or `[{project}-Question]` in English mode (Q10, Q10-2 default), followed by the run's request name (Q18)
-   - the reply line "이 스레드에 답해 주세요" (Q10, Q10-2 default)
-   - the mention
+2. **Fixed parts.** It adds the parts that are fixed, so no model writes them. They depend on the kind:
+   - **A `question`, a `review` or a `request`** waits for the user, so it gets all three (Q10, Q10-2 default):
+     - the header `[{project}-질문]`, or `[{project}-Question]` in English mode, followed by the run's request name (Q18)
+     - the reply line "이 스레드에 답해 주세요"
+     - the mention
+   - **A `report`** gets the request name and the mention, without the header or the reply line.
+   - **A `reply`** gets none of them; it goes into the thread it answers.
 3. **Buttons.**
    - A review gets an approval button for its revision ([recording](#recording)).
    - A question with options gets one button per option. A reply in the thread still counts as an answer, so the user can also answer in their own words.
 4. **Format.** It posts the text as a Slack `markdown` block. Anything over the 12,000-character limit is attached as a file in the thread ([slack.md](slack.md#rules)).
-5. **Record.** It records the post's thread and starts the reminder clock ([slack.md](slack.md#questions)).
+5. **Record.** It records the post's thread. For a question, a review or a request, it also starts the reminder clock ([slack.md](slack.md#questions)).
 
 **If the Korean writer fails:**
 - It is retried on the next engine option, then again later.
@@ -213,15 +216,16 @@ Answers are records made by code, not transcriptions by a model (09-29 draft pri
 
 The S5 review document shows what the AI understood the intent to be (Q01, Q06). It is stored as a review record before it is posted ([recording](#recording)). It holds:
 - What will be built, what will not be built, and how "done" is judged.
-- The impact level from S2 and its reasons (Q13).
+- The impact level from S2 and its reasons (Q13 analysis; AI).
 - The large and medium topics, as deep as the impact level asks ([task-tree.md](task-tree.md#split)), each with its Korean display name in Korean mode (Q10, option 10-c K).
-- For a project with screens, the wireframes. For one with an API, the API rules (archived Q-011; Q17; [workflow.md](workflow.md#design)).
+- At extended and full depth: for a project with screens, the wireframes; for one with an API, the API rules (archived Q-011; Q17; [workflow.md](workflow.md#design)).
 - Any change to the project's repo list (Q17-2; [runs.md](runs.md#projects)).
 - The decisions the AI made on its own that the user may want to see (AI).
 
 **The specs come with it.** The requirements spec and the functional spec are rendered from the units with `barrel memory render` and attached to the review post (flow 3–4).
 - In Korean mode they go through the Korean writer. Q08's chosen option lists "검토용 요구사항·기능 명세" among the texts sent to the user in their language.
-- At local and extended depth, only the requirements and features this run changed are attached (AI).
+- At extended depth, only the requirements and features this run changed are attached (AI).
+- At local depth the review is the short intent summary alone, with nothing attached (Q13).
 
 <a id="stack"></a>
 ## The S6 stack confirmation

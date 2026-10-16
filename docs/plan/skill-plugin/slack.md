@@ -4,7 +4,7 @@ Slack is where Barrel talks to people (flow 11, Q03-3, Q09, Q10).
 - **It sends:** progress reports, snapshots, questions, review requests, and requests for things only the user can do.
 - **It takes back:** answers, button presses, instructions and commands.
 
-The settled rules come from [q10-confirmed.md](../interview/q10-confirmed.md). This document restates them in English with their sources, and adds what later answers decided: runs per request (Q18), approval and option buttons (archived D-045; Q17), cancelling a run (archived Q-009; Q17), and no credentials through Slack (Q20).
+The settled rules come from [q10-confirmed.md](../interview/q10-confirmed.md). This document restates them in English with their sources, and adds what later answers decided: runs per request (Q18), approval buttons (archived D-045; Q17), cancelling a run (archived Q-009; Q17), and no credentials through Slack (Q20). Option buttons on questions are an AI addition; a reply in the thread, which Q10 asked for, still counts.
 
 Q10 defaults that the Q10 answer or Q10-2 changed are noted where they apply. Defaults proposed in Q10-2 are tagged `(Q10-2 default)`.
 
@@ -19,7 +19,7 @@ Q10 defaults that the Q10 answer or Q10-2 changed are noted where they apply. De
   - If that OAuth does not work, Codex sessions read Slack through `barrel slack read`. It uses the launcher's bot token, so it can read only the channels the bot is in, which are Barrel's own (spike fallback; [launcher.md](launcher.md#commands)).
 - **One Slack app and one Socket Mode connection per PC**, held by the launcher (Q11).
   - Slack delivers each event to only one of an app's open connections, so a single connection keeps events from going astray.
-  - For the same reason, two PCs never share an app. Each PC's setup creates its own app, for example "Barrel (wook-mbp)" (AI).
+  - For the same reason, two PCs never share an app. Each PC's setup creates its own app, for example "Barrel (office-mbp)" (AI).
   - The launcher routes each event to its project by channel, and to its run as [below](#routing).
 - **Incoming messages are never lost** (AI). The launcher records a message before it acknowledges it, and catches up from the channel's history after downtime or a reconnect ([launcher.md](launcher.md#recovery)).
 - **One private channel per project on each PC.** The bot creates it at the project's first run and invites the registered user, and nobody else (Q09, Q10 default; archived D-043; creation by the bot is AI).
@@ -30,7 +30,7 @@ Q10 defaults that the Q10 answer or Q10-2 changed are noted where they apply. De
 - **Setup** happens in first-run setup ([plugin.md](plugin.md#setup)). Q09's chosen option sets the target: the skill prepares the app up to its manifest, and the user only approves the install and enters the tokens (Q09, option 9-a X; details AI).
   1. The skill writes the app manifest and creates the app from it. Whether this works through the browser or through Slack's manifest API is a spike item.
      - If automation fails, the user creates the app from the generated manifest, with guided steps (spike fallback).
-  2. The user approves the install and pastes the app token (`xapp-`), plus the bot token (`xoxb-`) unless the install hands it to Barrel. Both go into the Keychain.
+  2. The user approves the install and enters the app token (`xapp-`), plus the bot token (`xoxb-`) unless the install hands it to Barrel. They are entered in the macOS input dialog, not typed into the CLI, so no model sees them (Q20; AI). Both go into the Keychain.
   3. Barrel learns which Slack account is the user's, because only that account is obeyed (archived D-043).
      - The target is to take it from the install itself, so the user does nothing more (spike).
      - The install's OAuth redirect then lands on this Mac, and the launcher exchanges the code. That ties the installing account to this Mac, which is the local check D-043 asks for: an install alone, with nothing on the Mac, would not count.
@@ -79,7 +79,7 @@ The event catalog in [launcher.md](launcher.md#events) lists every event with it
 - **The progress line.** Each channel message ends with a progress line, so the latest message always shows the current state.
   - From S7 on, the line reads like "말단 34/80 완료 · 진행 3 · 막힘 1 · 답 대기 1". Leaves are split one medium topic at a time, so the total is the number of leaves split so far (AI).
   - Before S7, the line shows the stage and the open questions instead, for example "요구사항 인터뷰 · 답 대기 1" (AI).
-  - With several runs, the line covers the run the message belongs to, and a snapshot covers them all (Q18; AI).
+  - With several runs, the line shows every run of the project, one part per run under its request name (Q18 analysis).
 
 <a id="rules"></a>
 ## Sending rules
@@ -142,10 +142,11 @@ The event catalog in [launcher.md](launcher.md#events) lists every event with it
 | --- | --- | --- |
 | Log in again | An account's login expired ([sessions.md](sessions.md#accounts)) | Run the given login command for that account; the account comes back once it passes |
 | Log in to clone | A repo in `repos.json` could not be cloned ([runs.md](runs.md#clones)) | Sign in to the git host; the clone is tried again |
-| Calibration failed | A CLI update broke step2step's screen reading, and no Barrel update fixed it ([launcher.md](launcher.md#versions)) | Nothing at once: that CLI is left out until a fix arrives. The request says so and names the CLI and its version |
 | Enter a credential | An orchestrator asked for one with `barrel secret ask` | Type it into the dialog open on the Mac ([memory.md](memory.md#secrets)) |
 | Save the sudo password | A command needs administrator rights, and no password is saved yet, or the saved one stopped working ([task-execution.md](task-execution.md#sudo)) | Type it once into the dialog open on the Mac |
 | Run the skill again | An account folder could not be repaired after a version mismatch ([launcher.md](launcher.md#versions)) | Run the `barrel` skill, which repeats setup |
+
+**A notice, not a request.** When a CLI update broke step2step's screen reading and no Barrel update fixed it, the user has nothing to do ([launcher.md](launcher.md#versions)). The launcher then posts a fixed notice in the channel, with no mention and no reminders, that names the CLI and its version and says it is left out until a fix arrives (Q10 default: mention only what the user must act on; AI).
 
 <a id="routing"></a>
 ## Which run a message belongs to

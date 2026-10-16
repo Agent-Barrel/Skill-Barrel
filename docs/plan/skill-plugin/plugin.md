@@ -83,7 +83,7 @@ The launcher starts every session with these environment variables (09-29 draft,
 
 | Variable | Value |
 | --- | --- |
-| `BARREL_ROLE` | `orchestrator`, `task`, `designer`, `experiment` or `ko_writer`. Also `advice`, `intent_check`, `context`, `research`, `verification` or `review`, when those run as fresh sessions |
+| `BARREL_ROLE` | `orchestrator`, `task`, `designer`, `experiment`, `ko_writer` or `curator`. Also `advice`, `intent_check`, `context`, `research`, `verification` or `review`, when those run as fresh sessions |
 | `BARREL_PROJECT` | The project ID |
 | `BARREL_RUN` | The run ID |
 | `BARREL_TASK`, `BARREL_LANE` | The leaf ID and the lane number, in task sessions only |
@@ -109,9 +109,9 @@ The launcher starts every session with these environment variables (09-29 draft,
 | Every Barrel hook event | Any Barrel role | The first time the event fires in a session, write a marker with the plugin version. The launcher checks the markers ([below](#trust)) (AI) | Marker file | Marker file |
 | PreToolUse on file writes | Orchestrator | Allow writes only to two places (09-29 draft: the orchestrator does not edit product code; paths AI):<br>• `.barrel/` in its run's integration worktree of the planning repo, while it holds the memory turn (Q24), except the files the launcher writes: `answer/`, the generated indexes, the Korean display names and the posted Korean texts of reviews<br>• the orchestrator's run-state folder | Deny `Write`, `Edit` with a reason | Deny `apply_patch` (matched as `Edit`, `Write`) with a reason |
 | PreToolUse on file writes and shell commands | Subagents of the orchestrator | Allow writes only to the orchestrator's run-state folder, for their reports. Deny every `barrel` command, so a subagent cannot approve, post or hand off (AI) | Deny. Calls from a subagent carry `agent_id` | Spike: whether Codex hooks can tell a subagent's calls apart |
-| PreToolUse on file writes | Task | Allow writes only inside the leaf's `write_set`. An investigation leaf may also write its report in `outputs/` (09-29 draft). In its memory turn, also the memory units it may write: new `implementation`, `lesson` and `decision` units, and the units in `memory_writes` (Q24) | Deny | Deny |
+| PreToolUse on file writes | Task | Allow writes only inside the leaf's `write_set`. An investigation leaf may also write its report in `outputs/` (09-29 draft). In its memory turn, also the memory units it may write, in the planning repo's integration worktree of its run: new `implementation`, `lesson` and `decision` units, and the units in `memory_writes` (Q24) | Deny | Deny |
 | PreToolUse on file reads | Task | Deny reads of `.barrel/memory/` outside the session's memory turn. The units it needs come in its prompt (AI; a guard rail) | Deny `Read`, `Grep`, `Glob` on that path | Deny on that path where Codex's hooks see reads |
-| PreToolUse on file writes | Fresh auxiliary sessions | Allow writes only to their own place in run state: `outputs/` for the designer and the Korean writer, their `experiments/<n>/` folder for an experiment. In their memory turn, also new `lesson` units (AI; Q24) | Deny | Deny |
+| PreToolUse on file writes | Fresh auxiliary sessions | Allow writes only to their own place in run state: their `experiments/<n>/` folder for an experiment, and `outputs/` for every other one: the designer, the Korean writer, the curator, and subagent roles that run as fresh sessions. In their memory turn, also new `lesson` units (AI; Q24) | Deny | Deny |
 | PreToolUse on shell commands | Any Barrel role | Deny git commands that move refs or rewrite history (commit, push, reset, rebase, merge, switching branches, deleting branches or tags) and `--no-verify`. The launcher makes every commit and merge (09-29 draft; [runs.md](runs.md#branches)) | Deny `Bash` | Deny `Bash` |
 | PreToolUse on shell commands | Any Barrel role | Deny a raw `sudo`, and say to use `barrel-sudo -- <command>` instead. Without a terminal, a raw sudo would wait for a password forever (Q20) | Deny `Bash` | Deny `Bash` |
 | PreToolUse on shell commands | Task | Deny system package installs: `brew install`, and global npm or pip installs, whether run directly or through `barrel-sudo`. Approved tools come through `env.setup` (archived Q-008; Q19; AI) | Deny `Bash` | Deny `Bash` |
@@ -152,7 +152,7 @@ The launcher starts every session with these environment variables (09-29 draft,
   - The password is not asked at setup. It is asked the first time a command needs it ([task-execution.md](task-execution.md#sudo)).
 - **The plugin**, in two kinds of account folders (Q05; archived D-048; Q17-2):
   - **The user's own folders** (`~/.claude`, `~/.claude-<name>`, `~/.codex`, …) get only the Barrel plugin, so the skill can be invoked from any of them. Its hooks do nothing in the user's own sessions, which carry no role marker.
-  - **The Barrel-managed folders** (`~/.barrel/accounts/<engine>-<account>/`) get the Barrel plugin, Skill-Techblog, the Slack MCP, and the MCP servers and skills the user picked ([sessions.md](sessions.md#barrel-folders)).
+  - **The Barrel-managed folders** (`~/.barrel/accounts/<engine>-<account>/`) get the Barrel plugin, Skill-Techblog, the Slack MCP, and the personal settings the user picked ([sessions.md](sessions.md#barrel-folders)).
   - Commands, per folder:
     - Claude: `CLAUDE_CONFIG_DIR=<dir> claude plugin marketplace add Agent-Barrel/Skill-Barrel`, then `claude plugin install barrel@<marketplace>`.
     - Codex: `CODEX_HOME=<dir> codex plugin marketplace add Agent-Barrel/Skill-Barrel`, then `codex plugin add barrel@<marketplace>`.
@@ -178,7 +178,8 @@ The skill runs these steps in the invoking session and skips any step that is al
 4. **User profile** (archived D-001, Q-001; Q17). Ask, in plain words, whether the user is a developer. The answer is kept in `~/.barrel/settings.json`. It decides two things:
    - whether questions use plain words ([interviews.md](interviews.md#plain))
    - whether delivery merges automatically ([runs.md](runs.md#delivery))
-5. **GitHub** (archived Q-002, Q-003).
+5. **Git and GitHub** (archived Q-002, Q-003, Q-008).
+   - If `git` or `gh` is missing, setup installs it; a global install is allowed. Compatible versions already on the PC are reused (archived Q-008). Setup says what it installed.
    - Recommend connecting GitHub with `gh auth login`. The user may skip it, and Barrel then works on the Mac alone. It is offered again when a delivery needs a remote.
    - A non-developer who connects chooses once whether Barrel saves each new project to a private GitHub repository automatically. A project can turn that off in its `config.json`.
 6. **Accounts** ([sessions.md](sessions.md#accounts)).
@@ -188,7 +189,7 @@ The skill runs these steps in the invoking session and skips any step that is al
 
    An interactive login may need a terminal the invoking agent cannot drive. Then the skill shows the command, the user runs it with `!` in the same CLI, and the skill checks again (spike fallback).
 7. **Personal settings** (archived D-048; Q17-2). List what the user's own folders hold: personal instructions, memory, MCP servers, skills and hooks. The user picks what Barrel's sessions should get; nothing is imported without being picked. Then:
-   - picked instructions and memory become shared preferences ([memory.md](memory.md#shared))
+   - picked instructions and memory become the user-level instruction files of every Barrel-managed folder, on both engines, so every Barrel session loads them (flow 1)
    - picked MCP servers and skills go into the Barrel-managed folders of both engines, where the engine supports them
    - picked hooks go only to the engine they were written for
 8. **Barrel-managed config folders** ([sessions.md](sessions.md#barrel-folders)). Create `~/.barrel/accounts/<engine>-<account>/` for each account, and make it use the account's existing login. If the login cannot be reused, sign in to each Barrel folder once (spike fallback).
@@ -196,19 +197,20 @@ The skill runs these steps in the invoking session and skips any step that is al
 10. **Codex hooks.** Start a short test session the way the launcher will, and check that Barrel's hooks run with the trust bypass. If they do not, walk the user through `/hooks` in each Codex home ([trust](#trust)).
 11. **Slack app**, one for this PC ([slack.md](slack.md#setup)) (Q09, option 9-a X: the skill prepares the app; the user only approves the install and enters the tokens):
     1. The skill writes the manifest ([slack.md](slack.md#manifest)) and creates the app from it. How it creates the app, through the browser or Slack's manifest API, is spike item 19. If that fails, the user creates the app from the manifest, with guided steps (spike fallback).
-    2. The user approves the install in the workspace and pastes the tokens: the app token, and the bot token unless the install hands it to Barrel. They go into the Keychain.
+    2. The user approves the install in the workspace and enters the tokens in the macOS input dialog, not in the CLI: the app token, and the bot token unless the install hands it to Barrel. They go into the Keychain, and no model sees them (Q20; AI).
     3. Barrel learns the user's Slack ID from the install, if the spike shows that works. Otherwise the user types a one-time code into the bot's DM (archived D-043; [slack.md](slack.md#setup)).
 12. **Slack MCP for Codex.** `codex mcp add` with the new app's client ID, then `codex mcp login`, in every Codex home of Barrel's ([install](#install)).
 13. **The sudo tool.** Install it and sign it ([install](#install)) (Q20).
 14. **Barrel.app.** Create `~/Applications/Barrel.app` with `osacompile` ([pc-view.md](pc-view.md#reopen)) (AI, delegated in Q10-2).
 15. **Browser automation.** Check that `npx` exists for the Playwright MCP server. If it is missing, a leaf that needs a browser asks for it later (AI).
-16. **Launcher.** Start the launcher detached, or as a bootstrapped launchd job if the spike requires it ([launcher.md](launcher.md#process)) (Q11). It is never registered as a login item (Q22-2).
-17. **Settings.** Write `~/.barrel/settings.json`:
+16. **Settings.** Write `~/.barrel/settings.json`:
     - the engines in use, and the accounts, in order
-    - the user profile
+    - the user profile, and the GitHub auto-save choice of step 5
     - the Slack app and the registered user
     - the language: Korean (Q10)
     - the sleep policy: `ac` (archived D-047; default AI)
+    - paid usage: off (archived D-012, D-033; [sessions.md](sessions.md#paid))
+17. **Launcher.** Start the launcher detached, or as a bootstrapped launchd job if the spike requires it ([launcher.md](launcher.md#process)) (Q11). It is never registered as a login item (Q22-2).
 
 <a id="budget"></a>
 ## Context budget

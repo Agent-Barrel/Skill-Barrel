@@ -9,7 +9,7 @@ At the start of S7, before any leaf runs (09-29 draft, S5; AI):
 
 1. **Preflight.** The unit loop's checks from `task_runner.preflight`: tools, free disk space, and the configured commands (`barrel/core/preflight.py`, run at `barrel/core/unitloop.py:516-527`).
 2. **Environment.** `env.setup` runs in the integration worktrees ([sessions.md](sessions.md#engines)). Product secret files, such as `.env`, are written there from the Keychain ([memory.md](memory.md#secrets)).
-3. **Baseline.** The project's existing checks in `task_runner.baseline` run once on the head of the run branches, and their results are kept in run state. A check that fails here is pre-existing ([below](#pre-existing)). This is what makes "unrelated to the request" provable (archived Q-005; archived orchestration.md).
+3. **Baseline.** The project's existing checks in `task_runner.baseline` run once on the head of the run branches, and their results are kept in run state, down to each failing test or error. A failure seen here is pre-existing ([below](#pre-existing)). This is what makes "unrelated to the request" provable (archived Q-005; archived orchestration.md).
 
 A preflight or environment failure does not end the run, as it does in the unit loop (exit code 3, `barrel/core/unitloop.py:516-527`). It goes to the orchestrator. The orchestrator fixes it with a setup leaf, or asks the user, for example to approve installing a tool ([user-only](#user-only)) (AI).
 
@@ -39,7 +39,7 @@ A preflight or environment failure does not end the run, as it does in the unit 
    - **Working directory:** the lane's folder of the repo the leaf writes. A leaf that writes several repos works from the lane's root, which holds them all (AI).
    - **Mode and markers:** plan mode, with `BARREL_TASK` and `BARREL_LANE` set.
    - A leaf with `browser: true` also gets the browser-automation server ([user-only](#user-only)).
-   - **The first prompt** holds the contract, the units in `memory_units`, the in-progress list ([memory.md](memory.md#queue)), and a pointer to the task playbook (insight; Q24).
+   - **The first prompt** holds the contract, the units in `memory_units`, the memory indexes and the in-progress list ([memory.md](memory.md#queue)), and a pointer to the task playbook (insight; Q24).
 5. **Capture the plan.**
    - Codex returns the plan text before approval (`step2step/codex/session.py:274-290`).
    - Claude does not, yet:
@@ -120,6 +120,7 @@ From [Q19](../interview/q19-new-technology-threshold.md); the mechanism is AI.
 - **Within one attempt.** The session gets gate feedback.
   - When the same fingerprint repeats `task_runner.repeat_limit` times, the leaf climbs the ladder (`unitloop.py:756-757`).
   - The ladder raises effort, then changes model, then moves to the next engine option or tier ([sessions.md](sessions.md#escalation)).
+  - A refusal is the exception: it never climbs the ladder to another model or engine, and goes to the orchestrator instead (archived D-041; [sessions.md](sessions.md#escalation)).
 - **Environment failures.**
   - The recovery command `task_runner.gates.env_recover` runs once (`unitloop.py:740-755`).
   - If that does not help, only this leaf stops and goes to the orchestrator.
@@ -169,7 +170,7 @@ When a check fails for a reason unrelated to the request, the orchestrator expla
 
 Rules:
 - Work whose completion depends on the answer waits (archived Q-005).
-- A failure counts as pre-existing only if the S7 baseline shows it ([preflight](#preflight)).
+- A failure counts as pre-existing only if the S7 baseline shows it ([preflight](#preflight)). The comparison is per failure, not per check: in a check that already failed, a new failing test, or one that got worse, is the run's to fix (archived Q-005).
 - A check that did not run, is flaky, or failed for an unknown reason never counts as pre-existing.
 
 <a id="lanes"></a>
@@ -185,11 +186,12 @@ Rules:
   The last rule applies archived D-032, "참조 문서 변경을 먼저 끝낸 뒤 이를 읽는 구현을 시작한다", to memory units. When independence is unclear, the leaves run one at a time. A read-only investigation leaf writes only its report in run state, so it never conflicts.
 - **Across runs** (Q18; AI).
   - The launcher gives free lanes to the ready leaves of the project's runs in turn, oldest waiting first, so no run starves.
-  - Leaves of different runs commit to different run branches. Between them only the `resources` rule applies. Overlaps in files and memory are settled when the later run merges the earlier one ([runs.md](runs.md#delivery)).
+  - Leaves of different runs commit to different run branches. Between them, the `resources` rule and the memory-unit rule apply, because the in-progress list covers every run of the project (Q24). Overlaps in files are settled when the later run merges the earlier one ([runs.md](runs.md#delivery)).
+- **Across projects** (archived D-032: by dependencies, not by project boundaries; AI). The `resources` rule also applies between projects on the PC, for example two leaves that need the same port, database or account budget.
 - **Lanes** are git worktrees under `~/.barrel/projects/<id>/lanes/<n>/<repo>/`, one per repo of the project, each on a detached HEAD ([runs.md](runs.md#branches)).
   - They are reused, and each one is reset to the head of the leaf's run branch before a new leaf.
   - Reuse keeps installed dependencies, and `env.setup` runs when a manifest changed (Q14, AI).
-- **Lane numbers.** Each lane gets `BARREL_LANE`. Gates that start a server derive its port from that number (AI).
+- **Lane numbers and ports.** Each lane gets `BARREL_LANE` for its paths. Each running leaf also gets `BARREL_PORT`, a port range that is unique on the PC, so gates that start a server never collide across projects (AI).
 - **Integration worktrees:** `~/.barrel/projects/<id>/runs/<run>/integration/<repo>/`, each checked out on the run branch of its repo. Merges and post-merge gates run there, and the planning repo's `.barrel/` changes are made there, all through the memory queue (AI; Q24).
 - **Trial merge:** when a leaf passes in its lane, its finishing turn merges its commits into the run branches without committing. The leaf's gates then run again on the merged tree (Q14).
   - If they pass, the merges are committed.
@@ -227,16 +229,18 @@ Moved to [runs.md](runs.md): branches and worktrees in [runs.md#branches](runs.m
 - **Resume:** an interrupted leaf runs in a new session on top of those leftover changes (Q10-2).
   - Must-fail-first is skipped for it, because the leftover changes may already make its gates pass.
   - It is judged by its gates as usual (AI, needed by Q10-2).
+  - It keeps its contract revision, its approvals and its scopes. A decision changed meanwhile reaches it only through a new contract revision (archived D-031: a resumed task, or one moved to another account, keeps its existing approval, permission and cost policy).
 - **A leaf that moved** to another account at a usage limit follows the same rule ([failures](#failures)).
 
 <a id="user-only"></a>
 ## Things only the user can do
 
-- **The request.** A leaf that needs a login, a credential, a payment or a permission asks for it like any other question ([questions](#questions)). The orchestrator posts the request (`barrel post --kind request`) with a mention, and only that leaf blocks (Q01, Q10).
+- **The request.** A leaf that needs a login, a payment or a permission asks for it like any other question ([questions](#questions)). The orchestrator posts the request (`barrel post --kind request`) with a mention, and only that leaf blocks (Q01, Q10). A credential goes through `barrel secret ask` instead, below.
 - **Inside the delegated scope** (archived D-013). The S6 confirmation records which environments, actions and costs the user delegated. Setup inside that scope goes ahead without asking again; anything beyond it is asked ([interviews.md](interviews.md#stack)).
 - **Credentials** (Q20; [memory.md](memory.md#secrets)).
-  - The request says what is needed, and a native macOS dialog with hidden input opens on the Mac at the same time.
-  - The value goes to the Keychain, and the leaf reads it by name with `barrel secret get <name>`.
+  - The orchestrator calls `barrel secret ask <name>`. The launcher posts the request, which says what is needed, and opens a native macOS dialog with hidden input on the Mac at the same time.
+  - The value goes to the Keychain. The leaf uses it by name through `barrel secret run`, which hands it to one command's environment, and never sees it (Q20: the model gets only the name).
+  - A credential the leaf creates is stored through `barrel secret capture` ([memory.md](memory.md#secrets)).
   - Nothing secret is taken through Slack. A developer may use `barrel secret set <name>` instead.
   - Example from flow 10: the user enters the AWS account details, or signs in, and the leaf creates the IAM key and configures the AWS CLI with it.
 
@@ -249,7 +253,7 @@ Moved to [runs.md](runs.md): branches and worktrees in [runs.md#branches](runs.m
     - Only the tool may read its Keychain item, so the tool is a compiled binary.
     - Rust is considered first, because one code base can serve macOS and Windows.
   - **No raw sudo.** A hook denies a raw `sudo` in Barrel sessions and points to the tool, so no session hangs on a password prompt it cannot answer ([plugin.md](plugin.md#hooks)).
-  - **Logged.** Every command run through the tool goes into the event log and into the leaf's result report, among its effects outside the repo.
+  - **Logged.** Every command run through the tool goes into the event log, as a `sudo_command` event that is never sent to Slack, and into the leaf's result report, among its effects outside the repo.
   - **What it does not change.** It does not widen what may be installed. A tool installed on the PC still needs the S6 confirmation (Q19; archived Q-008), and the hook that stops system package installs also checks the command given to `barrel-sudo`.
   - **A password that stopped working**, for example after the user changed it, becomes a request to save it again, with the dialog open on the Mac ([slack.md](slack.md#launcher-requests)).
   - **Who does the work.** Barrel does the administrator work. The user only saves the password (archived D-059, adapted by Q20).
@@ -272,13 +276,15 @@ Moved to [runs.md](runs.md): branches and worktrees in [runs.md#branches](runs.m
 - **Computer use** (Claude Code, research preview, macOS only) (archived D-025; Q17):
   - CLIs, APIs and the automation browser come first. The screen is the last resort.
   - The request explains the work and its scope, and asks for a time window. Computer use runs only after the user agrees to one in the thread, and only within it.
-  - The user can end the window at any time from the thread. It also ends when the agreed time is over, or when the launcher sees the user using the Mac (spike).
+  - The user can end the window at any time from the thread. It also ends when the agreed time is over, or when the user starts using the Mac again (archived D-025: the user can take the screen back). How the launcher notices that is AI and a spike check.
   - If computer use is not available, Playwright is used. A step that still fails becomes a request to the user (spike fallback).
 - **External services** (archived D-069; Q17).
   - A leaf's work with outside services goes through the tools and MCP servers chosen for that leaf. They are passed per session like the browser server, within the delegated scope.
   - Barrel's own messages to the user still go only through the launcher's bot (`barrel post`; Q09, Q10 default). The Slack MCP stays read-only in Barrel sessions ([plugin.md](plugin.md#hooks)).
 - **Tools** (archived Q-008; Q19).
-  - Tools in the confirmed stack, or in the project's existing setup, may be installed through `env.setup`, or through `barrel-sudo` when they need administrator rights. Installing anything else (Homebrew packages, global npm or pip packages, Docker images) is asked first.
+  - Tools confirmed in S6 are installed by the launcher, not by a task session. It runs the confirmed install commands, through `barrel-sudo` when they need administrator rights, before the first leaf that needs the tool (Q19, Q20; AI). They are kept in `env.tools` in `.barrel/config.json`.
+  - The project's own dependencies come through `env.setup` ([sessions.md](sessions.md#engines)).
+  - Installing anything else, such as Homebrew packages, global npm or pip packages, or Docker images, is asked first.
   - Compatible tools already on the PC are reused.
   - Personal settings, other projects and the user's own AI CLIs are left alone.
   - A hook stops task sessions from running system package installs, with or without `barrel-sudo` ([plugin.md](plugin.md#hooks)) (AI).

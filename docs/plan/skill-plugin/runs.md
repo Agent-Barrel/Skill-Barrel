@@ -19,9 +19,8 @@ A project is a planning repo plus the repos it lists, side by side in one parent
 
 - **The planning repo** holds `.barrel/`: the memory, task trees, reviews, designs, config, and the list of repos in `repos.json` ([memory.md](memory.md#repos)).
 - **The parent folder** is the folder that holds the planning repo. Every repo of the project sits in it, in the folder `repos.json` names (archived Q-014).
-- **One repo is the common case.**
-  - A single-repo project lists only itself (Q17-2).
-  - Its planning repo also holds the code. A small project is never given a separate planning repo (archived Q-015).
+- **One repo or several.** A project has as many repos as its functional split needs (archived Q-014):
+  - A small project that one repo serves keeps one. It lists only itself (Q17-2), and its planning repo also holds the code. It is never given a separate planning repo (archived Q-015).
 - **Several repos** are split by function, such as a frontend and a backend, so each can be deployed and tested on its own. They are not split finer than needed (archived Q-014).
 - **No monorepo** unless the user asks for one (archived Q-014).
 - **What belongs to one repo** stays in that repo, such as an API's full specification. The planning repo points to it ([memory.md](memory.md#kinds)) (archived Q-015).
@@ -125,9 +124,9 @@ From archived D-039 and Q-018, which Q17 restored.
   - Sequential IDs would collide. Two runs on different branches, or two teammates, would both create `REQ-013`.
   - This follows Beads, an issue tracker for coding agents that keeps its data in git. Beads moved from sequential to hash IDs in 0.20.1 (2025-10-31) to stop collisions between agents and branches ([research.md](research.md#prior-art)).
 - **A duplicate after a merge.** `barrel memory index` reports it if one ever appears. The unit created later gets a new ID, and the references to it are updated (AI).
-- **Answer units are the exception.** They are never edited or renamed ([memory.md](memory.md#rules)).
+- **Answer units are the exception.** Their content is never edited ([memory.md](memory.md#rules)).
   - They get 8-character IDs, so a duplicate is not expected.
-  - If one ever appears anyway, the orchestrator asks the user how to proceed.
+  - If one ever appears anyway, the launcher gives the later one a new ID, updates the references and logs the change. The user is not asked, because it is a technical matter (Q01; AI).
 - **Task IDs stay readable.** Each run has its own tree folder, so hierarchical IDs cannot collide ([sharing](#sharing)).
 - **IDs are stable.** An ID never changes once given, except in the duplicate case above.
 
@@ -179,11 +178,12 @@ From archived D-039 and Q-018, which Q17 restored.
   - If skipped, the delivery stays local, and the final report says so (AI).
 
 <a id="merge"></a>
-**Merging into the base** (AI). Git does not let one branch be checked out in two worktrees, and Barrel never touches the user's checkout. So, in each repo:
+**Merging into the base** (AI). Git does not let one branch be checked out in two worktrees, and Barrel does not touch a developer's checkout. So, in each repo:
 - **The base is not checked out anywhere:** the launcher checks it out in the integration worktree, merges the run branch, and pushes the base if it has a remote.
 - **The base is the branch the user has checked out:**
   - **With a remote**, the launcher merges on a temporary branch made from the remote base and pushes that to the base; the user pulls.
-  - **Without a remote**, the orchestrator posts a request with the merge command for the user to run. The run waits for that merge ([below](#waiting)).
+  - **Without a remote, for a developer**, the orchestrator posts a request with the merge command for the user to run. The run waits for that merge ([below](#waiting)).
+  - **Without a remote, for a non-developer** who has no git policy of their own, Barrel manages git and merges automatically (archived Q-001, Q-002, Q-018). The launcher merges in that checkout itself, but only when git can do it without touching the user's uncommitted changes. Otherwise it asks the user in plain words to close or save their work first (AI).
 
 **Before delivering** (archived repositories.md; details AI):
 1. **Re-check the base** in every repo. It may have moved since the run started, for example because another run of the project was delivered (Q18). If it moved, merge it into the run branch, commit the merge, then run every gate of the run.
@@ -208,7 +208,7 @@ While waiting:
 - **No sessions.** No session runs while the run waits. The launcher checks now and then:
   - **A pull request** is judged by its state, through `gh`:
     - Merged: the delivery is done.
-    - Closed without a merge: the user is asked whether to reopen it, deliver another way, or leave the run undelivered.
+    - Closed without a merge: the launcher emits `pr_closed`, and an orchestrator asks the user whether to reopen it, deliver another way, or leave the run undelivered.
     - Whether the base contains the run branch is not used, because squash and rebase merges leave the branch out of the base's history.
   - **A merge the user runs** is judged by the base containing the run branch.
 - **The end.** The launcher emits `delivery_done`. An orchestrator then writes and posts the final report, which completes the run ([task-execution.md](task-execution.md#acceptance)).
@@ -253,12 +253,13 @@ From archived Q-009, which Q17 restored. The previous design had dropped it by m
   The PC view keeps only stop and resume (Q10-2).
 - **What happens** (archived Q-009):
   1. **The run stops at once,** like a stop of that run alone: no new session, running turns interrupted, sessions closed ([launcher.md](launcher.md#stop)). The project's other runs go on.
-  2. **A short summary** shows what the run changed and has not delivered: for each repo, the commits and files on the run branch that are not in the base. The post carries [보관] (keep) and [폐기] (discard) buttons.
-  3. **Nothing is deleted** until the user picks.
-  4. **Keep.**
-     - The run branches stay, with their memory changes, and the run is marked cancelled.
+  2. **Its unfinished work is saved first.** The lanes are shared with the other runs, so the changes each interrupted leaf left in its lane are saved as a patch in the run's `parked/`, before any lane is reset (archived Q-009: "사용자의 선택 전까지 변경분을 보존한다"; AI).
+  3. **A short summary** shows what the run made and has not delivered: for each repo, the commits and files on the run branch that are not in the base, plus the parked patches. The post carries [보관] (keep) and [폐기] (discard) buttons.
+  4. **Nothing is deleted** until the user picks. A run waiting for this choice keeps the launcher running ([launcher.md](launcher.md#process)).
+  5. **Keep.**
+     - The run branches and the parked patches stay, with their memory changes, and the run is marked cancelled.
      - It is never completed, merged or resumed on its own. A later run includes it only when the user instructs it to (archived Q-009).
-  5. **Discard.** The run branches and the run's worktrees are deleted. The run state keeps the run's records until the project's records are removed.
+  6. **Discard.** The run branches, the parked patches and the run's worktrees are deleted. The run state keeps the run's records until the project's records are removed.
 - **Never undone by a cancel** (archived Q-009): the user's own changes, code already delivered, deployments, and tools installed on the PC.
 
 <a id="after"></a>
@@ -267,14 +268,14 @@ From archived Q-009, which Q17 restored. The previous design had dropped it by m
 - **The integration worktrees are removed**, so the user can check out the run branch (archived D-062; AI).
 - **The lanes stay**, with their installed dependencies, for the project's next leaves (archived D-062; AI).
 - **Leftovers are deleted after delivery:** session snapshots and transcript copies. Downloaded Slack attachments are deleted once the last work that needs them is done (archived D-062, D-063). The result reports and the event log stay.
-- **A post when no run is active.** The launcher answers with a fixed message that says how to start one: run the `barrel` skill with the request (Q22-2).
+- **A post when no run is active.** The launcher answers with a fixed message that says how to start one: run the `barrel` skill with the request (Q22-2). The launcher may not be running then, because it exits when idle ([launcher.md](launcher.md#process)). It then answers when it next starts and catches up on the channel ([launcher.md](launcher.md#recovery)).
   - Runs start from the skill only; Slack never starts one (Q03-3, Q22-2).
   - The orchestrator that would have taken the post no longer exists.
 
 <a id="archive"></a>
 ## Archiving a project or removing its records
 
-From archived Q-020 and Q-021, added after the second readiness check. Commands AI.
+From archived Q-020, added after the second readiness check, and Q-021, which Q17 restored with group 4. Commands AI.
 
 - **Archive** (`barrel project archive`).
   - Hides the project from Barrel.app's list and from the PC views.

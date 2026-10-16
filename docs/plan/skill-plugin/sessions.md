@@ -8,7 +8,7 @@
 | Invoking session | First-run setup and start, then it ends | The user's own session | none | Q03-3 |
 | Orchestrator | Assesses impact, interviews, splits the tree, writes contracts, checks plans and memory updates, decides, reports. One per run | A fresh session started by the launcher | strong, max | Q03-3, Q04-2, Q18 |
 | Task session | Implements one leaf | A fresh session | By the leaf's difficulty ([below](#difficulty)) | Q02, flow 0 |
-| Advice | A second opinion on a hard decision | A subagent of the orchestrator\* | frontier, max | flow 0, Q02, Q16 |
+| Advice | A second opinion on a hard decision | A subagent of the orchestrator\* | frontier, max | flow 0; as a subagent, AI after Q02 and Q16 |
 | Intent check | Checks a leaf's plan against its contract and units | A subagent of the orchestrator\* | strong, medium | Q02; archived P-001 |
 | Context gathering | Follows memory links; surveys code before a split or at onboarding; checks new packages | A subagent of the orchestrator\* | standard, medium | Q02; Q19 |
 | Research | Researches a question with current sources | A subagent of the orchestrator\* | strong, max | flow 5, flow 7, Q02, Q16 |
@@ -17,14 +17,18 @@
 | Designer | Draws the wireframes from the functional spec, then the detailed design of the main screens, with images from any service ([workflow.md](workflow.md#design)) | A fresh session | strong, high | archived Q-010, Q-011, Q-019; Q17 |
 | Experiment | Runs one minimal experiment for an S6 choice, in its own run-state folder ([workflow.md](workflow.md#experiments)) | A fresh session | strong, high | archived D-042; Q17 |
 | Korean writer | Writes Korean text from an English source with Skill-Techblog | A fresh session | strong, high | Q08, Q16 default |
+| Curator | Rewrites the shared-memory entries of a project whose records are removed, as archived Q-021 says ([memory.md](memory.md#shared)) | A fresh session | strong, medium | archived Q-021; AI |
 
 The Source column covers each role and how it runs. The default tiers and efforts are AI choices ([engines](#engines)), except two:
 - frontier for advice comes from flow 0
-- medium for the intent check comes from archived D-067
+- medium for the intent check comes from archived D-067 and P-001
+
+Max effort for the orchestrator's coordination, planning and synthesis follows archived D-022 and D-067. Their picks named by provider are replaced by the tiers (Q16); the strong tier holds the highest-scoring model of the 2026-10-07 tier doc ([research.md](research.md#models)).
 
 **How Q02 splits the work.** The user chose option A:
 - **Fresh sessions:** implementation, anything that needs plan approval, and anything that must survive an orchestrator restart. Design and experiments write files and can run long, so they are fresh sessions too (AI).
 - **Subagents:** short read-only work whose result can come back as a summary. That covers gathering context, research (자료 조사), and independent review by someone other than the worker (작업자가 아닌 쪽의 독립 검토).
+- **Advice.** Q02's option A listed advice among the fresh sessions only because it needed another provider. After Q16 it is short read-only work like the others, so it runs as a subagent too (AI).
 - A task session may use subagents of its own. How it uses them is up to that session. Barrel does not assign, watch or review them one by one; it is responsible for the leaf it assigned and for its result (archived Q-006; Q17).
 
 **Notes on the table:**
@@ -41,7 +45,7 @@ The Source column covers each role and how it runs. The default tiers and effort
   - The verification subagent gets the research report and its sources, never the research conversation.
   - A review subagent gets the contract, the units, the diff or the screenshots, and the gate output, never the task session's conversation.
 - **No subagent across a handoff** (AI). The orchestrator hands off only when none of its subagents is running ([lifecycle](#orchestrator)), so subagent work never has to survive a restart.
-- **Fresh auxiliary sessions end with a memory turn** (Q24). Designer, experiment and Korean-writer sessions record what they learned before they end ([memory.md](memory.md#queue)).
+- **Fresh auxiliary sessions end with a memory turn** (Q24). Every auxiliary session that runs as a fresh session records what it learned before it ends: the designer, an experiment, the Korean writer, the curator, and a subagent role that runs as a fresh session ([memory.md](memory.md#queue)).
 - **The Korean writer is always a fresh session** (Q16 default). It writes files, and Skill-Techblog starts a subagent of its own.
 - **Images are not tied to an engine** (archived Q-019; Q16). The designer uses whatever image service is available: Codex's built-in image generation when it runs on Codex, or any other service through browser automation with the user's sign-ins ([workflow.md](workflow.md#design)).
 - **Model and effort per subagent.**
@@ -60,7 +64,7 @@ These modes are what the existing drivers already do (AI to keep them):
 
 | Engine | Every session starts with | Plan mode, for task sessions |
 | --- | --- | --- |
-| Claude Code | `--dangerously-skip-permissions` (`step2step/claude/runner.py:363-370`) | Entered with Shift+Tab before the prompt (`step2step/claude/session.py:222-223`). Approval picks option 1 of the plan menu (`step2step/claude/runner.py:1287-1310`), which puts the session back in bypass (`step2step/claude/session.py:107-110`). On the verified 2.1.272 its label reads "Yes, and switch to bypass permissions" (`step2step/claude/screen.py:68`) |
+| Claude Code | `--dangerously-skip-permissions` (`step2step/claude/runner.py:363-370`) | Entered with Shift+Tab before the prompt (`step2step/claude/session.py:222-223`). Approval picks option 1 of the plan menu (`step2step/claude/runner.py:1288-1310`), which puts the session back in bypass (`step2step/claude/session.py:107-110`). On the verified 2.1.272 its label reads "Yes, and switch to bypass permissions" (`step2step/claude/screen.py:68`) |
 | Codex | Approval `never` and sandbox `danger-full-access`, the defaults (`step2step/codex/session.py:44-54`) | The planning turn runs read-only. Execution turns use the session's sandbox (`step2step/codex/session.py:183-188`) |
 
 - The orchestrator and the auxiliary sessions run in the same modes. Their hooks limit where they may write.
@@ -98,7 +102,8 @@ These modes are what the existing drivers already do (AI to keep them):
     "review":        {"tier": "strong",   "effort": "max"},
     "designer":      {"tier": "strong",   "effort": "high"},
     "experiment":    {"tier": "strong",   "effort": "high"},
-    "ko_writer":     {"tier": "strong",   "effort": "high"}
+    "ko_writer":     {"tier": "strong",   "effort": "high"},
+    "curator":       {"tier": "strong",   "effort": "medium"}
   },
   "leaves": {
     "light":  {"tier": "standard", "effort": "medium"},
@@ -110,9 +115,9 @@ These modes are what the existing drivers already do (AI to keep them):
   "memory": {"turn_seconds": 600},
   "cascade": {"default": "ask"},
   "git": {"delivery": null, "github_autosave": null},
-  "env": {"setup": []},
+  "env": {"setup": [], "tools": []},
   "task_runner": {
-    "preflight": {"tools": ["git"], "min_free_mb": 1024, "commands": []},
+    "preflight": {"tools": ["git"], "docker": false, "min_free_mb": 1024, "commands": []},
     "baseline": [],
     "gates": {"timeout_seconds": 3600, "before": [], "after_timeout": [], "env_recover": []},
     "budget": {"turn_seconds": 3600, "unit_turns": 12, "unit_wall_seconds": 14400, "stall_seconds": 180, "progress_seconds": 1800},
@@ -126,8 +131,9 @@ The sections after `concurrency` (AI):
 - **`memory.turn_seconds`:** how long a session may hold its memory turn before it loses it ([memory.md](memory.md#queue)) (Q24 default).
 - **`cascade.default`:** what happens when a change affects running leaves: `ask`, `next_task` or `now` ([workflow.md](workflow.md#cascade)) (archived D-031; Q17).
 - **`git.delivery`:** how a finished run is delivered ([runs.md](runs.md#delivery)). `git.github_autosave` turns off the automatic private GitHub repository for this project (archived Q-003).
+- **`env.tools`:** the install commands of the tools the user confirmed in S6. The launcher runs them, through `barrel-sudo` when they need administrator rights, before the first leaf that needs the tool (archived Q-008; Q19, Q20; [task-execution.md](task-execution.md#user-only)).
 - **`env.setup`:** commands that install the project's dependencies in a worktree. They run when a lane or an integration worktree is prepared and a dependency manifest changed since that worktree's last use. The unit loop has no such command today.
-- **`task_runner`:** the unit loop's run configuration, reused as is (`barrel/core/unitloop.py:47-83`; budget fields at `barrel/core/failures.py:262-271`). One field is new: `baseline`, the project's existing check commands, run once at the start of S7 ([task-execution.md](task-execution.md#preflight)).
+- **`task_runner`:** the unit loop's run configuration (`barrel/core/unitloop.py:47-83`; budget fields at `barrel/core/failures.py:262-271`), reused apart from the keys listed below. One field is new: `baseline`, the project's existing check commands, run once at the start of S7 ([task-execution.md](task-execution.md#preflight)).
 - **Not carried from the unit loop's configuration**, because a decision replaces each of them:
 
   | Unit-loop key | Replaced by |
@@ -212,17 +218,27 @@ When the orchestrator splits a medium topic, it gives each leaf a difficulty. Mo
   - the Barrel plugin, Skill-Techblog and the Slack MCP ([plugin.md](plugin.md#install))
   - only the personal settings the user picked at setup: instructions, memory, MCP servers, skills and hooks (archived D-048)
 
-  Picked instructions and memory become shared preferences ([memory.md](memory.md#shared)), so every engine and account sees the same context (flow 1). Picked MCP servers and skills go into the Barrel folders of both engines where the engine supports them. Hooks go only to the engine they were written for (AI).
+  Picked items load into every Barrel session on both engines, so no engine or account knows more than another (flow 1; AI):
+  - Picked instructions and memory become the user-level instruction files of every Barrel folder: `CLAUDE.md` for Claude, `AGENTS.md` for Codex. Where they conflict with the project's units, the units win, as the playbooks say.
+  - Picked MCP servers and skills go into the Barrel folders of both engines, where the engine supports them.
+  - Hooks go only to the engine they were written for.
 - **What it never touches:** the user's own folders, beyond installing the Barrel plugin so the skill can be invoked there, and any managed policy of the organization (archived D-048).
 - **Recorded.** Each session records the configuration and the versions it actually loaded, in the session list and the result report (archived D-048; [task-execution.md](task-execution.md#report)).
 
 <a id="paid"></a>
-**Subscriptions only** (archived D-012, D-033, D-056; Q17).
-- **What Barrel runs on.** Sessions use subscription logins only. Paid usage beyond the subscriptions, such as API keys or extra credits, is off, and Barrel never switches to it silently.
-- **How it is enforced.**
+**Paid usage beyond the subscriptions** (archived D-012, D-033, D-050, D-056; Q17).
+- **Subscription logins only.** Sessions run on subscription logins, and Barrel never switches to API billing on its own.
   - Codex: step2step accepts only a ChatGPT login (`step2step/codex/session.py:97-99`, `step2step/codex/transport.py:76`).
   - Claude: step2step removes `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and the `CLAUDE*` variables from the child's environment (`step2step/claude/runner.py:72-83`, `:153-163`). It does not check how a config folder is logged in, so setup checks each Claude account's login method and leaves out any account that is not a subscription login (AI; spike).
-- **No path to turn it on.** This version has none. If one is added, archived D-012 and D-033 apply: explicit permission, a monthly budget across all projects, and a strict or estimate mode.
+- **Paid usage is off by default** (archived D-033). Nothing a session does may bill beyond the subscriptions, such as image generation through an API key.
+- **Only the user turns it on** (archived D-012), with:
+  - explicit permission, given in Slack or at setup
+  - one monthly budget for all projects together
+  - a mode (archived D-033): strict, which stops before the budget would be exceeded and is offered first, or estimate, which goes on from estimated costs
+
+  The setting lives in `~/.barrel/settings.json` (AI).
+- **Accounting** (archived D-050): paid usage counts against the month it is consumed. Prepaid credits count when they are used, purchases are shown separately, and nothing is counted twice.
+- **Not this budget:** the costs of the product's own infrastructure, such as cloud resources, which belong to the delegated scope of S6 (archived D-013).
 - **An earlier sentence is corrected.** The 2026-10-11 design said every account is used "whatever its login method". That contradicted step2step's Codex check and this decision.
 
 **When an account becomes unusable.** Either way, new sessions go to the other accounts (Q05), and the affected session is restarted from files on another account or engine (Q05, Q12). A task session's leaf keeps its lane changes, and the new session continues on top of them, as on resume ([task-execution.md](task-execution.md#stop)) (AI).
@@ -251,7 +267,9 @@ Both need a per-session environment parameter ([launcher.md](launcher.md#reuse))
 Escalation reuses the unit loop's ladder (`barrel/core/failures.py:224-257`):
 - When the same failure fingerprint repeats, effort goes up first, then the model changes.
 - With tiers, the ladder moves to another option of the same tier, then to the next tier up, ending at `frontier` (AI). This matches the model tier doc's advice: go to Fable 5.1 or Astra when failure loops cost more than tokens.
-- A refusal jumps straight to a different model (`failures.py:246-257`).
+- **A refusal is not routed around** (archived D-041: a policy refusal or a permission limit is never bypassed through another account or path).
+  - The unit loop jumps straight to a different model when a session refuses (`failures.py:246-257`). Barrel replaces that.
+  - The refusal goes to the orchestrator, which checks the contract against the intent. If the contract was at fault, a new revision runs; if the refusal stands, the user is asked (AI).
 
 <a id="orchestrator"></a>
 ## Orchestrator lifecycle
@@ -268,7 +286,7 @@ Escalation reuses the unit loop's ladder (`barrel/core/failures.py:224-257`):
   - In the turn after a leaf finishes, it checks the leaf's memory update against the contract.
   - At the end of each medium topic, it consolidates the memory that topic changed, and promotes verified experience to shared memory.
 - **Handoff triggers:**
-  - The end of a stage (Q03-3, Q04-2).
+  - The end of a stage (Q03, option A).
   - During implementation, the end of each medium topic (Q03, option A: the orchestrator ends after one topic).
   - Context use above the threshold. The launcher measures it after every turn (Q03 analysis):
     - Claude: from `message.usage` in the transcript.

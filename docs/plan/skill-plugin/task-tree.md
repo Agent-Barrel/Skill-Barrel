@@ -4,7 +4,11 @@
 ## Levels
 
 - **The tree.** Work is split into a tree: large topic, then medium topic, then leaf (small topic). The tree is executed from the top down, recursively (insight).
-- **Depth varies.** A project may need more or fewer levels; the orchestrator adapts the depth to the project (insight).
+- **Depth varies** (insight: "프로젝트의 특성에 맞춰 더 세분화된 분류, 덜 세분화된 분류도 가능"). The orchestrator gives the tree as many levels as the project needs, two at least. The rules in these documents name three levels and apply by position (AI):
+  - **Large topics** are the top level.
+  - **Medium topics** are the nodes whose children are leaves. Every rule that names a medium topic applies to them: the split when its turn comes, its Slack thread, the handoff, the regression check and the memory consolidation at its end.
+  - **Leaves** are the nodes without children.
+  - In a two-level tree, each large topic is also its own medium topic. In a deeper tree, the levels in between are split in S5 together with the large topics, and the S5 review shows the top two levels (Q06). They are marked `group`.
 - **One tree per run.** Each run has its own tree, in `.barrel/tasks/<run>/` of the planning repo ([runs.md](runs.md#sharing)). Several runs of a project each have their own (Q18).
 - **Node IDs** are hierarchical within the run: `T1` for a large topic, `T1.2` for a medium topic, `T1.2.3` for a leaf. From outside the run, a node is written `<run>/T1.2.3`. An ID never changes once given (AI).
 
@@ -49,7 +53,7 @@ Each node is one file in `.barrel/tasks/<run>/` of the planning repo, tracked by
 ```markdown
 ---
 id: T1.2.3
-level: leaf                 # large | medium | leaf
+level: leaf                 # large | group | medium | leaf
 parent: T1.2
 title: Add the Google sign-in button to the login page
 depends_on: [T1.2.1]        # T1.2.1 wrote the tests this leaf must pass
@@ -62,7 +66,7 @@ resources: []               # ports, databases, paths outside the repo, shared e
 memory_units: [REQ-k3f9, FEAT-2m7q, SCR-a81k, API-4qzt, DEC-x81c, CON-p4tz, IMP-b2n7]
 memory_writes: [IMP-b2n7]   # existing units this leaf may change (Q24)
 packages: []                # new packages this leaf may add, already checked (Q19)
-secrets: []                 # Keychain names this leaf may read or store (memory.md#secrets)
+secrets: []                 # Keychain names this leaf may use or store, never see (memory.md#secrets)
 browser: false              # gets the browser-automation server (task-execution.md#user-only)
 review: [visual]            # code (archived Q-004), visual (Q17)
 expect_baseline_fail: true  # false when the leaf must keep existing behavior
@@ -99,7 +103,7 @@ Large and medium nodes hold a short description and their children; they have no
 | `write_set` | New. Checked before commit, and used to decide what may run in parallel. Paths name their repo | 09-29 draft, Q14; Q17 |
 | `read_set`, `resources` | New. Used to decide what may run in parallel ([task-execution.md](task-execution.md#lanes)) | archived D-032 |
 | `secrets`, `browser` | New. What the leaf may use for things only the user can grant ([task-execution.md](task-execution.md#user-only)) | AI; Q20 |
-| `level`, `parent` | New. The tree | Q06 |
+| `level`, `parent` | New. The tree; `group` marks a level between the large and the medium topics | Q06; insight; AI |
 | `review` | New. `code` for an independent code review, `visual` for a comparison with the approved design | archived Q-004; Q17 |
 | `status`, `commit` | New. Durable status only. `commit` holds one commit per repo | Q15; Q17 |
 
@@ -113,7 +117,7 @@ Large and medium nodes hold a short description and their children; they have no
   - The orchestrator writes the contract, `planned` and `abandoned`.
   - The launcher writes `done` and the commits in the leaf's finishing turn ([memory.md](memory.md#finish)) (AI).
   - Every write goes through the memory queue (Q24).
-- **In the run state** (`~/.barrel/projects/<id>/runs/<run>/run.json`): running, blocked, waiting for an answer, attempts, sessions, lanes, and the in-progress list with each running leaf's `memory_writes` (Q15, Q24). The launcher writes it.
+- **In the run state**: `run.json` of the run holds running, blocked, waiting for an answer, attempts, sessions and lanes (Q15). The project's `in-progress.json` lists the running leaves of all its runs with their `memory_writes` (Q24). The launcher writes both ([memory.md](memory.md#run-state)).
 
 <a id="names"></a>
 ## Korean display names

@@ -13,7 +13,7 @@ None of them depends on a CLI's own memory or on one account or session (flow 1,
 <a id="layout"></a>
 ## `.barrel/` in the planning repo
 
-A project's shared files live in its planning repo. For most projects that is the only repo. For a project of several repos, it is the repo that holds the shared planning (archived Q-014, Q-015; Q17; [runs.md](runs.md#projects)).
+A project's shared files live in its planning repo. A small project that one repo serves has only that repo, which is then its planning repo. A project split into several repos has one repo for the shared planning (archived Q-014, Q-015; Q17; [runs.md](runs.md#projects)).
 
 ```text
 .barrel/
@@ -144,13 +144,13 @@ These kinds are an AI default, and a project may add more. Every kind gets its o
 | --- | --- | --- |
 | The launcher, which is code | `answer` units; the generated indexes; the Korean display names and the Korean text of review records as posted; the default `config.json`, `.gitignore` and `repos.json` at a project's first run; a leaf's `done` status and its commits | Q07, Q24; AI |
 | The orchestrator | Every other kind, including intent, requirements and features as the user decides them; review records and design revisions; task files and contracts; later changes to `config.json` and `repos.json` | AI; Q24 |
-| Task sessions | In their memory turn only:<br>• new `implementation`, `lesson` and `decision` units about their own work<br>• changes to the units listed in their contract's `memory_writes` | Q24, Q24 default |
-| Designer, experiment and Korean-writer sessions | In their memory turn only: new `lesson` units. Their main output goes to the run state, and the orchestrator turns it into units | Q24; AI |
+| Task sessions | In their memory turn only, in the planning repo's integration worktree of their run:<br>• new `implementation`, `lesson` and `decision` units about their own work<br>• changes to the units listed in their contract's `memory_writes` | Q24, Q24 default |
+| Fresh auxiliary sessions: the designer, experiments, the Korean writer, the curator, and subagent roles that run as fresh sessions | In their memory turn only: new `lesson` units. Their main output goes to the run state, and the orchestrator or, for the curator, the launcher turns it into units or entries | Q24; AI |
 | Subagents | Never `.barrel/`, only their reports in the orchestrator's run-state folder ([sessions.md](sessions.md#roles)) | AI |
 | People | Anything, as with any file in the repo. Edits to specs and memory are reviewed ([workflow.md](workflow.md#edits)) | Q12; archived D-020 |
 
 - **Hooks enforce the table.** A session may write `.barrel/` only while it holds the queue, and only what its row allows. The orchestrator's hook also denies edits to `answer/` and to generated files ([plugin.md](plugin.md#hooks)).
-- **Commits.** Every turn of the queue ends in one commit on the run branch of the planning repo, made by the launcher ([runs.md](runs.md#branches)). The subject is `barrel: memory (<writer>)`, and every Barrel commit carries a `Barrel-Run: <run>` trailer (AI).
+- **Commits.** Every turn of the queue that changed `.barrel/` ends in one commit on the run branch of the planning repo, made by the launcher ([runs.md](runs.md#branches)). The subject is `barrel: memory (<writer>)`, and every Barrel commit carries a `Barrel-Run: <run>` trailer (AI).
 
 <a id="queue"></a>
 ## The memory queue
@@ -170,6 +170,7 @@ The user then chose the AI's four additions: update right after the merge, a con
   - Every write to `.barrel/`: memory units, task files, reviews, designs, config.
   - Every git operation in the project's integration worktrees: merges, commits and delivery. This makes it also the git queue of the earlier design.
   - A turn holds the queue from its first write to its commit, so no other writer touches `.barrel/` or an integration worktree meanwhile. Uncommitted `.barrel/` edits therefore never meet a merge.
+  - An answer reaches the orchestrator as soon as the launcher records it in run state. Only its unit's commit waits for the queue, so a long merge never delays a question (AI).
 - **Who queues** (Q24): task sessions, auxiliary sessions, the orchestrator, and the launcher itself when it records answers or merges.
 - **Order.** First come, first served. A session queues when it finishes its work, so sessions update memory and end in the order they finished (Q24).
 
@@ -200,7 +201,7 @@ Why this order (Q24 default): memory updated before the merge would describe cod
 - **Checks.** The launcher checks every update before it commits. The orchestrator checks each leaf's update against its contract in its next turn.
 - **Stop.** The user's stop does not wait for memory turns; it still halts within 15 s ([launcher.md](launcher.md#stop)). A turn cut short is discarded and done again: an interrupted leaf updates memory when it finishes after the resume.
 - **A session that dies** before its turn: the next session for that leaf writes the update from the leftover changes and the result report. Until then the leaf does not count as done.
-- **A session that stalls** in its turn loses it after `memory.turn_seconds` (default 600 s, AI). Its uncommitted `.barrel/` changes are discarded, and its update is done again.
+- **A session that stalls** in its turn loses it after `memory.turn_seconds` (default 600 s, AI). The clock covers the session's own part, from the moment it is shown the memory to its `barrel memory end`; the launcher's merge and gates before it do not count. Its uncommitted `.barrel/` changes are discarded, and its update is done again.
 
 **Consolidation** (Q24). At the end of each medium topic, the orchestrator:
 - reviews the units changed in that topic
@@ -211,10 +212,10 @@ This point is already a handoff and a regression check ([task-execution.md](task
 
 **Announcing work** (Q24):
 - **The plan is in git.** A contract, committed when its medium topic is split, lists the memory units the leaf may change, in `memory_writes` ([task-tree.md](task-tree.md#fields)).
-- **"In progress" is in run state.** It lists the running leaves and the units they may change.
+- **"In progress" is in run state.** One list per project, across all its runs, names the running leaves and the units they may change (Q24; per project, AI).
   - Every session gets this list together with the memory indexes, when it starts and when it takes its turn.
   - A note committed to git would not reach sessions that are already running, because a lane is fixed to the commit it started from.
-- **The parallel rule** keeps conflicting work apart. Two leaves never run together if one may change a memory unit that the other reads or may change (archived D-032; [task-execution.md](task-execution.md#lanes)).
+- **The parallel rule** keeps conflicting work apart. Two leaves never run together if one may change a memory unit that the other reads or may change, even when they belong to different runs of the project (archived D-032; [task-execution.md](task-execution.md#lanes)).
 
 This replaces two parts of earlier AI defaults ([open-decisions.md](open-decisions.md#ai-defaults)):
 - one writer per file (default 8)
@@ -242,7 +243,7 @@ Every plan, for a medium topic or a leaf, is aligned with the memory this way (f
 
 | Session | Given |
 | --- | --- |
-| Task session | Its contract, the units in `memory_units` (shared entries included), and the in-progress list. Not the whole memory, and never a conversation (insight, Q07 default). A hook denies it reads of `.barrel/memory/` outside its memory turn; this is a guard rail (AI) |
+| Task session | Its contract, the units in `memory_units` (shared entries included), the memory indexes and the in-progress list (Q24). Not the other units, and never a conversation (insight, Q07 default). A hook denies it reads of `.barrel/memory/` outside its memory turn; this is a guard rail (AI). A unit it finds missing in the indexes is asked for as a question ([task-execution.md](task-execution.md#questions)) |
 | Orchestrator | The indexes, the shared-memory index, the in-progress list, the latest handoff note and its playbook. It reads units when it needs them (AI) |
 | Subagent of the orchestrator | The prompt and the files the orchestrator names (AI) |
 | Fresh auxiliary session | The input files named in `barrel session start`, and in its memory turn the indexes (AI) |
@@ -264,7 +265,6 @@ Project knowledge stays in the project's repo (Q07). The PC keeps only what belo
 - **Preferences** (archived D-030):
   - **Explicit.** A general preference the user states, such as "always use pnpm", is recorded as `active`.
   - **Inferred.** A preference the AI infers from the user's choices is recorded as `candidate`. A candidate is never applied as a decision. It may be offered as the recommendation in a question, and the answer confirms or drops it (AI).
-  - **Picked at setup.** Personal instructions and memory that the user picked at setup (archived D-048) are imported as explicit preferences. So every engine and every account sees the same context (flow 1; AI).
 - **Experience** (archived D-008):
   - A successful approach that gates and reviews verified, kept with its situation, attempt, result and evidence.
   - The orchestrator promotes it at a medium topic's consolidation ([queue](#queue)). Each entry lists the projects it came from.
@@ -281,7 +281,7 @@ Project knowledge stays in the project's repo (Q07). The PC keeps only what belo
   - an entry that cannot be separated from the project is deleted
   - preferences the user set, and experience from other projects, stay
 
-  This takes judgment, so the launcher runs it in a fresh auxiliary session (AI).
+  This takes judgment, so the launcher starts a fresh `curator` session ([sessions.md](sessions.md#roles)). The curator writes the rewritten entries into its output, and the launcher applies them (AI).
 
 <a id="run-state"></a>
 ## Run state outside the repo
@@ -290,8 +290,10 @@ Run state lives outside the repo (Q07). The launcher writes it, except for the f
 
 ```text
 ~/.barrel/
-  settings.json          engines and accounts in order, the user profile, the Slack app and registered Slack user,
-                         Slack language, sleep policy, update state (Q05, Q10-2 default, archived D-001, D-047; Q21)
+  settings.json          engines and accounts in order, the user profile, the GitHub auto-save choice, the Slack app and
+                         registered Slack user, Slack language, sleep policy, the paid-usage setting, update state
+                         (Q05, Q10-2 default, archived D-001, D-012, D-033, D-047, Q-003; Q21)
+  events.jsonl           the PC-wide event log: updates, launcher restarts (launcher.md#events)
   launcher.sock          command socket (launcher.md)
   launcher.lock, launcher.log
   accounts/<engine>-<account>/   Barrel-managed config folders (sessions.md#accounts)
@@ -302,12 +304,13 @@ Run state lives outside the repo (Q07). The launcher writes it, except for the f
     project.json         planning repo path, parent folder, Slack channel, archived flag
     view.json            PC view port and token, file mode 0600 (AI, for Q10-2's fixed address)
     queue.json           the memory queue: the turn in progress and the writers waiting (Q24)
+    in-progress.json     the running leaves of every run of the project, with the units they may change (Q24)
     lanes/<n>/<repo>/    reused worktrees for leaf tasks, one per repo of the project (Q14)
     browser/             the browser profile for browser automation and the user's sign-ins (task-execution.md#user-only)
     runs/<run>/
       run.json           request name, phase, stopped or cancelled flag, base per repo, transient task status
                          (running, waiting for an answer, blocked, attempts), sessions and their PIDs, lanes,
-                         the in-progress list, open questions, the interview ledger
+                         open questions, the interview ledger
       integration/<repo>/  worktree on the run branch of each repo the run uses (runs.md#branches)
       events.jsonl       event log (Q10 default)
       slack.json         thread map, outbound queue, last handled inbound message, reminder clocks (Q10 default)
@@ -335,13 +338,14 @@ From [Q20](../interview/q20-credentials-and-sudo-tool.md) unless marked; it repl
 
 - **Storage.** Slack tokens, and every credential the user provides for flow 10, live in the macOS Keychain, through the `security` command (AI).
 - **How the user gives a credential** (Q20):
-  - The request goes to Slack with a mention and says what is needed. At the same time the launcher opens a native macOS input dialog on the Mac, with the input hidden.
-  - The value goes straight into the Keychain under a generated name. The orchestrator and the sessions get only that name.
+  - The orchestrator names the credential and calls `barrel secret ask <name>` ([launcher.md](launcher.md#commands)). The launcher posts the request in Slack with a mention, saying what is needed, and at the same time opens a native macOS input dialog on the Mac, with the input hidden ([slack.md](slack.md#launcher-requests)).
+  - The value goes straight into the Keychain under that name. The orchestrator and the sessions get only the name (Q20: "모델에게는 이름만 넘긴다").
   - Credentials are never taken through Slack. One pasted into Slack by mistake is masked in its answer unit and moved to the Keychain. The message itself stays in Slack's history, because Barrel cannot delete the user's messages.
   - `barrel secret set <name>` in a terminal stays as an option for developers.
   - While the user is away, only the work that needs the credential waits (Q01).
-- **Reading one.** A task session reads a credential with `barrel secret get <name>`, for the names in its contract's `secrets` field ([launcher.md](launcher.md#access)).
-- **Storing one a leaf creates** (AI). A leaf that creates a credential, such as an IAM key, stores it with `barrel secret put <name>`, which reads the value from standard input. The names it may store are listed in its `secrets` field.
+- **Using one** (AI). A task session never sees a value. It runs `barrel secret run --env <VAR>=<name> -- <command>`, which puts the value into that command's environment only, for the names in its contract's `secrets` field ([launcher.md](launcher.md#access)).
+- **Storing one a leaf creates** (AI). A leaf that creates a credential, such as an IAM key, runs the creating command through `barrel secret capture <name> [--field <path>] -- <command>`. The tool stores the value it reads from the command's output in the Keychain and prints only what is not secret. The names a leaf may store are listed in its `secrets` field.
+- **Slack's own tokens** are entered at setup through the same dialog, never typed into the CLI, so they never reach a model's transcript ([plugin.md](plugin.md#setup)) (AI).
 - **Product secrets** (AI). The product may need secret files, such as `.env`.
   - They are written from the Keychain into git-ignored files when a lane or an integration worktree is prepared.
   - The launcher never commits those paths, even when one appears in a write set.
@@ -350,4 +354,5 @@ From [Q20](../interview/q20-credentials-and-sudo-tool.md) unless marked; it repl
 - **Where credentials never go:**
   - a file in the repo
   - a unit
+  - a model's prompt, output or transcript, as far as the tools can keep them out
   - a message Barrel sends, because everything sent is masked first (Q10 default)

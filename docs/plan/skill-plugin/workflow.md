@@ -30,13 +30,13 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | S0 First-run setup | Invoking session, with the user in the CLI | Details in [plugin.md](plugin.md#setup):<br>• finds the engines and the accounts, and asks whether the user has more subscriptions to add (flow 1, Q05)<br>• records a short user profile, including whether the user is a developer (archived D-001, Q-001; Q17)<br>• offers to connect GitHub, which the user may skip (archived Q-002)<br>• lists the user's personal CLI settings and takes only the ones the user picks (archived D-048; Q17-2)<br>• creates the Barrel-managed config folders, installs plugins, sets up the Slack app, creates Barrel.app and starts the launcher (Q09, Q11; Barrel.app is the AI's answer to Q10-2) | `~/.barrel/settings.json`, `~/.barrel/accounts/`, Keychain entries | Every check passes. Runs only when something is missing |
 | S1 Start | Invoking session, then the launcher | The skill takes the start input: a product concept, or a project to maintain plus what to change (flow 2). It finds or prepares the project's planning repo ([runs.md](runs.md#projects)). Then it asks the launcher to start a new run, even while another run of the project is going on (Q18). The launcher's first step clones the repos missing from the parent folder. A clone that needs a login becomes a request in Slack (Q17-2, Q03-3; [runs.md](runs.md#start)) | A registered run with its request name and branches, a Slack channel, an open PC view, an orchestrator | The orchestrator is running. The invoking session reports and ends (Q03-3) |
-| S2 Assess | Orchestrator | Does four things:<br>• On a project with no memory units yet, records what exists first ([onboarding](#onboarding))<br>• Settles where the run starts from, when that is unclear ([runs.md](runs.md#start-state))<br>• Reviews edits the user made directly in `.barrel/` ([direct edits](#edits))<br>• Reads the request against memory and code and classifies the impact (Q13) | A `decision` unit with the impact level and its reasons | Always |
+| S2 Assess | Orchestrator | Does four things:<br>• On a project with no memory units yet, records what exists first ([onboarding](#onboarding))<br>• Settles where the run starts from, when that is unclear ([runs.md](runs.md#start-state))<br>• Reviews edits the user made directly in `.barrel/` ([direct edits](#edits))<br>• Reads the request against memory and code and classifies the impact (Q13). The survey behind it runs in context-gathering subagents at medium effort, and the orchestrator decides from their findings (archived D-034) | A `decision` unit with the impact level and its reasons | Always |
 | S3 Requirements | Orchestrator + user over Slack | Requirements interview (flow 3) | `requirement`, `answer` and `decision` units | See [interviews.md](interviews.md#exits) |
 | S4 Functional spec | Orchestrator + user over Slack; designer sessions | Functional-spec interview built on the requirements (flow 4). Then, for a project with screens, wireframes made from the functional spec. For a project with an API, the API's rules follow the wireframes ([design](#design)) | `feature` units; `screen` units with wireframes; `api` units | See [interviews.md](interviews.md#exits) |
 | S5 Intent review | Orchestrator, then the user | Splits the work into large and medium topics and writes an intent summary. The user reviews them together with the specs, the wireframes and the API rules, as deep as the impact level asks (Q01, Q06, Q13; archived Q-011) | Task nodes for the top two levels; the review document as a review record ([interviews.md](interviews.md#review)) | The user presses [승인 rN] on the current revision (archived D-045; Q17) |
 | S6 Implementation prep | Orchestrator; research and verification subagents; designer and experiment sessions; the user | Technical research: how to implement each requirement, and which open-source projects or services to use, with their pros, cons and constraints such as licensing, all from current sources (flow 6–7). For a project with screens it covers modern UI references (archived Q-010, Q-019). Minimal [experiments](#experiments) where a choice needs one. Then the detailed design of the main screens. The user then confirms what needs confirming (flow 8; Q13, Q19; archived D-013, Q-008, Q-011; Q17-2):<br>• the hard-to-reverse choices<br>• the detailed design<br>• the delegated scope and the tools<br>• any change to the repo list | `research` and `decision` units, a review record; `env` and `task_runner` in `.barrel/config.json` | The user approves the current revision, when a confirmation was needed ([interviews.md](interviews.md#exits)) |
 | S7 Implementation | Orchestrator, task sessions | Preflight and baseline first ([task-execution.md](task-execution.md#preflight)). Then medium topics run in tree order (flow 9–10, Q01, Q06, Q14, Q24):<br>• Each one is split into leaves when its turn comes, and the leaves run in fresh sessions.<br>• Every session updates memory before it ends.<br>• While one topic is blocked, independent work continues ([task-tree.md](task-tree.md#split)).<br>• Each finished topic gets a regression check and a memory consolidation | Commits on the run branches, task status, memory updates | Every leaf is done or abandoned. Abandoning one that would drop a requirement needs the user's answer ([task-execution.md](task-execution.md#failures)) |
-| S8 Acceptance | Orchestrator, review subagents | Every gate runs. Then the AI judges whether the result matches the requirements and the functional spec (Q01). Mismatches become new leaves. Then the result is delivered to every repo of the project, and the final report is posted ([task-execution.md](task-execution.md#acceptance), [runs.md](runs.md#delivery)) | The acceptance record, the delivery, the final report | The result matches and is delivered as `git.delivery` says, in every repo the run changed. The run ends with a mention to the user (Q10 default; archived D-024) |
+| S8 Acceptance | Orchestrator, review subagents | Every gate runs. Then the AI judges whether the result matches the requirements and the functional spec (Q01). Mismatches become new leaves. Then the result is delivered to every repo the run changed, and the final report is posted ([task-execution.md](task-execution.md#acceptance), [runs.md](runs.md#delivery)) | The acceptance record, the delivery, the final report | The result matches and is delivered as `git.delivery` says, in every repo the run changed. The run ends with a mention to the user (Q10 default; archived D-024) |
 
 **What "done" means** (archived D-003; Q17):
 - Barrel builds general software: web, desktop, mobile, automation.
@@ -134,14 +134,20 @@ Impact is judged on four things, never on file or line counts (archived D-026, D
 | Stage | Local | Extended | Full |
 | --- | --- | --- | --- |
 | S3 Requirements | Only questions the documents cannot answer; the affected requirements are updated | Interview the affected requirements only | Full interview |
-| S4 Functional spec | The affected features are updated. Wireframes only for a new screen or a changed flow | Interview the affected features; wireframes and API rules for the affected screens and APIs | Full interview, wireframes, API rules |
-| S5 Intent review | One short intent summary | Intent summary plus the affected topics | Intent summary plus the large and medium topics |
-| S6 Implementation prep | Only if new technology enters or a main screen's design changes | Same as local | Full technical research. A confirmation when new technology enters or screens are designed, which a new concept with screens always has |
+| S4 Functional spec | The affected features are updated | Interview the affected features; wireframes and API rules for the affected screens and APIs | Full interview, wireframes, API rules |
+| S5 Intent review | One short intent summary | Intent summary plus the affected topics, wireframes and API rules | Intent summary plus the large and medium topics, the wireframes and the API rules |
+| S6 Implementation prep | No stage of its own: the leaves' quick lookups are enough (AI) | Technical research for the affected features (AI, from flow 7). A confirmation when new technology enters or a main screen is designed | Full technical research. A confirmation when new technology enters or screens are designed, which a new concept with screens always has |
 | S7, S8 | Always | Always | Always |
+
+The interview depths in the S3–S5 rows are Q13's. The wireframe, API and S6 cells are AI, following Q13, archived Q-011 and flow 7.
 
 Rules:
 - A new product concept is always **full** (Q13).
-- The stack is confirmed only when new technology enters, at every depth (Q13). A full-impact change that adds no technology still gets full research, but no stack confirmation.
+- **Local means one short confirmation** (Q13: "국소는 … 짧은 작업 의도 요약 하나로 확인받는다"). So a request that needs any of these is at least **extended** (AI):
+  - a hard-to-reverse choice ([below](#new-technology))
+  - a new screen
+  - a redesigned main screen
+- The stack is confirmed only when new technology enters (Q13). A full-impact change that adds no technology still gets full research, but no stack confirmation.
 - The intent review before implementation is never skipped, whatever the depth (Q01).
 - When new risk appears mid-run, the orchestrator raises the impact level and runs the stages that are now needed ([going back](#back)).
 
@@ -186,7 +192,7 @@ Some changes are always asked:
 - **Dropping a requirement.** The user decides it, never the AI (Q01; archived D-041; [task-execution.md](task-execution.md#failures)).
 
 Before a question is posted:
-- A hard question gets advice from an advice subagent on the frontier tier (flow 0, Q02, Q16).
+- A hard question gets advice from an advice subagent on the frontier tier (flow 0, Q16; as a subagent, AI).
 - The question is researched, and the findings are verified (flow 5, Q16).
 
 See [interviews.md](interviews.md) for both steps.
@@ -221,11 +227,11 @@ When an instruction or an answer changes something decided earlier, the decision
    - Like any setting in that file, it can be changed by editing it or by an instruction in Slack ([sessions.md](sessions.md#engines)).
 5. It updates or supersedes the affected units and re-plans the task nodes that are not done yet. Finished work that must change becomes new leaves (AI).
 
-Memory that changes while a session runs reaches that session only at its memory turn, when it ends. Every new session starts from the current memory (archived D-031: automatic updates apply from the next CLI session; Q24).
+Memory that changes while a session runs reaches that session only at its memory turn, when it ends. Every new session starts from the current memory (archived D-031: automatic updates apply from the next CLI session; Q24). The exception is a leaf that resumes or moves to another account: it keeps its contract revision, its approvals and its scopes, and a change reaches it only through a new contract revision (archived D-031).
 
 <a id="edits"></a>
 **Edits the user makes directly** (archived D-020; Q17; detection AI):
-- **Anyone may edit `.barrel/`.** People may edit `.barrel/` files themselves, in their own checkout, like any file in the repo (Q12).
+- **Anyone may edit `.barrel/`.** People may edit `.barrel/` files themselves, in their own checkout, like any file in the repo (Q12 for `config.json`; archived D-020 for the specs and memory).
 - **How Barrel finds them.**
   - Such edits reach a run through git: through the run's base at start, and through the base merge before delivery ([runs.md](runs.md#delivery)).
   - The launcher finds them as `.barrel/` changes in commits that carry no `Barrel-Run` trailer, and emits `user_edit`.
@@ -234,7 +240,7 @@ Memory that changes while a session runs reaches that session only at its memory
   - Even when the existing plan seems to resolve it, it explains the context, the reasons and what it needs, and asks whether to apply that resolution.
   - It never applies a resolution silently (archived D-020).
 - **Not reviewed:**
-  - Edits to `.barrel/config.json` are ordinary team edits (Q12). They apply from the next session.
+  - Edits to `.barrel/config.json` are ordinary team edits (Q12). They apply once they reach the run branch: from the next run, or once merged into the run branch ([sessions.md](sessions.md#engines)).
   - This review does not make every ordinary action ask again (archived D-020).
 
 **Decisions that arrive through a merge** come from an earlier run, the base, or a parallel run of the same project (Q18). The orchestrator checks them against the run's own decisions, and a conflict is asked as a question with its cascade (Q18; AI).

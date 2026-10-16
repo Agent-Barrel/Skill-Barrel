@@ -22,12 +22,12 @@ Barrel is a skill for Claude Code and Codex. It changes how a coding agent works
    - It has the user review an intent summary and, as deep as the request needs, the top two levels of the task tree (Q01, Q06, Q13).
    - It researches the technology. When a choice is hard to reverse, the user confirms it, together with the detailed design of the main screens (flow 6–8, Q13, Q19).
    - It implements the work as small leaf tasks. Each leaf runs in a fresh coding-agent session that gets only the context it needs (insight, Q02, Q06).
-   - It checks the result and delivers it to every repo of the project.
+   - It checks the result and delivers it to every repo the run changed.
 4. Every decision and every piece of context lives in small linked files in the project's planning repo. None of it lives only in a session, an account or a CLI's own memory, so any session or account can be replaced at any point (flow 1, Q07).
 5. Every session Barrel starts brings that memory up to date before it ends, one session at a time. So no session works from a stale picture (Q24).
 6. Barrel asks the human only what those files cannot answer, and keeps working on unrelated tasks while one task waits. At the end it judges the result against the requirements and the functional spec (Q01).
 
-A project is a planning repo plus the repos it lists, side by side in one parent folder. Most projects have a single repo, which is then its own planning repo (Q17, Q17-2). Each request is its own run, so several runs of one project can go on side by side (Q18).
+A project is a planning repo plus the repos it lists, side by side in one parent folder. A small project that one repo serves has only that repo, which is then its planning repo; a project split by function, such as a frontend and a backend, has several (archived Q-014, Q-015; Q17, Q17-2). Each request is its own run, so several runs of one project can go on side by side (Q18).
 
 Barrel runs on macOS 15 or later, on Apple Silicon first (archived D-002, D-054; Q17).
 
@@ -99,7 +99,7 @@ Sources: the [2026-10-06 request](../README.md#source), [00-original-flow.md](..
 - No `claude -p` or other headless runs. Sessions are interactive and driven by `step2step` (repo rule).
 - No resident launcher, no login item, and no run started from Slack. Barrel is a skill: the skill, Barrel.app or a `barrel` command starts the launcher, and Slack only instructs runs that exist (Q22-2).
 - No pinned CLI version. CLI updates cannot be stopped, so Barrel keeps itself current instead (Q17-2, Q21).
-- No paid usage beyond the subscriptions (archived D-012, D-033, D-056; Q17).
+- No paid usage beyond the subscriptions unless the user turns it on, with a monthly budget (archived D-012, D-033, D-056; Q17).
 - No posting through the Slack MCP. Only the launcher's bot posts (Q09, Q10 default).
 - No editing of Slack messages. Progress is always a new message (Q10).
 - No answering questions or sending instructions from the PC view. That happens in Slack (Q10-2).
@@ -119,14 +119,14 @@ Sources: the [2026-10-06 request](../README.md#source), [00-original-flow.md](..
 | Engine | Claude Code or Codex, as used by Barrel (Q16) |
 | Account | One subscription login of an engine (Q05). The user's own config folders, such as `~/.claude-wook`, hold these logins |
 | Barrel-managed config folder | The config folder Barrel's sessions run from, one per account and named by the account: `~/.barrel/accounts/<engine>-<account>/`, used as `CLAUDE_CONFIG_DIR` or `CODEX_HOME`. It reuses the account's login and holds Barrel's plugin plus only the personal settings the user picked (archived D-048; Q17-2; [sessions.md](sessions.md#accounts)) |
-| Project | A planning repo and the repos listed in its `.barrel/repos.json`, side by side in one parent folder ([runs.md](runs.md#projects)). Most projects have one repo (Q17, Q17-2) |
+| Project | A planning repo and the repos listed in its `.barrel/repos.json`, side by side in one parent folder ([runs.md](runs.md#projects)). A small project may have only one repo (archived Q-014, Q-015; Q17, Q17-2) |
 | Planning repo | The repo that holds the project's `.barrel/`: memory, task trees, reviews, design and config (archived Q-015; Q17) |
 | Run | One execution for one request, from its start input to completion. Each request starts its own run, so a project can have several at once (Q18). Its ID looks like `20261013-a7mz` ([runs.md](runs.md#ids)) |
 | Request name | A short name for a run's request. It is shown on every Slack message and in the PC view (Q18) |
 | Run branch | `barrel/<run>` in every repo the run changes. The run's work is committed and delivered from it ([runs.md](runs.md#branches)) |
 | Orchestrator | The session that plans and directs one run. It is replaced by a successor at stage ends, at medium-topic ends, and before its context fills up (Q03, Q03-3, Q04-2) |
 | Task session | A fresh session that implements one leaf task (Q02) |
-| Auxiliary role | Advice, intent check, context gathering, research, verification, review, design, experiment or Korean writing ([sessions.md](sessions.md#roles)). The first six run as subagents of the orchestrator, or as fresh sessions when their engine is on another CLI (Q02, Q16). Design, experiments and Korean writing always run as fresh sessions |
+| Auxiliary role | Advice, intent check, context gathering, research, verification, review, design, experiment, Korean writing or curating shared memory ([sessions.md](sessions.md#roles)). The first six run as subagents of the orchestrator, or as fresh sessions when their engine is on another CLI (Q02, Q16; advice as a subagent is AI). The other four always run as fresh sessions |
 | Subagent | A child agent inside a session, used for short read-only work (Q02) |
 | Memory unit | One file under `.barrel/memory/` that holds one minimal piece of context (Q07). Its ID is a short hash, such as `REQ-k3f9` ([runs.md](runs.md#ids)) |
 | Memory queue | The launcher's queue, one per project, that lets one writer at a time change `.barrel/` and the project's integration worktrees (Q24; [memory.md](memory.md#queue)) |

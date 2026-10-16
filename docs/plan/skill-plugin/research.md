@@ -30,16 +30,16 @@ This file replaces the vendor section that was in [session-context.md](../sessio
 <a id="code"></a>
 ## The existing code (main at `5c15481`; checked 2026-10-13)
 
-All 186 code references in these documents were checked against the code on 2026-10-13. The full reuse and gap map with line references is in [launcher.md](launcher.md#reuse). The main points:
+All code references in these documents were checked against the code on 2026-10-13, and again on 2026-10-16 after the revision. The full reuse and gap map with line references is in [launcher.md](launcher.md#reuse). The main points:
 
 - **One child per handle.** step2step drives one session per handle and has no supervisor and no command channel for other processes.
-- **No lock between processes.** No code uses `fcntl`, `flock` or a lock file. step2step has thread locks only (`step2step/codex/transport.py:20`, `:70`; `step2step/codex/session.py:70`; `step2step/terminal/pty_session.py:59`; `step2step/terminal/screen.py:16`). The files that processes share today are the stop files, the state file saved by an atomic rename, and the hook's signal file; none of them is a lock.
+- **No lock between processes.** No code uses `fcntl`, `flock` or a lock file. step2step has thread locks only (`step2step/codex/transport.py:20`, `:70`; `step2step/codex/session.py:70`; `step2step/terminal/pty_session.py:59`; `step2step/terminal/screen.py:16`). The files that processes share today are the stop files, the state file saved by an atomic rename, and the hook's signal and events files (`step2step/claude/runner.py:346-351`); none of them is a lock.
 - **Codex threads.** Codex handles must be driven from the thread that created them (`step2step/codex/session.py:167-171`).
 - **Claude's flags.**
   - Every Claude session gets `--session-id`, `--settings` and `--dangerously-skip-permissions` (`step2step/claude/runner.py:363-370`).
   - `model`, `effort` and `system_prompt_append` have their own parameters. Anything else goes through `extra_args`, appended as is (`:381`).
   - Plan mode is entered with Shift+Tab before each prompt (`step2step/claude/session.py:222-223`).
-  - `approve_plan()` picks option 1 of the plan menu (`step2step/claude/runner.py:1287-1310`), so the session returns to bypass (`step2step/claude/session.py:107-110`). On the verified 2.1.272 its label reads "Yes, and switch to bypass permissions" (`step2step/claude/screen.py:68`).
+  - `approve_plan()` picks option 1 of the plan menu (`step2step/claude/runner.py:1288-1310`), so the session returns to bypass (`step2step/claude/session.py:107-110`). On the verified 2.1.272 its label reads "Yes, and switch to bypass permissions" (`step2step/claude/screen.py:68`).
 - **Codex's parameters.**
   - `thread/start` always boots read-only (`step2step/codex/session.py:105-119`).
   - Each turn's sandbox is set per turn (`:183-188`): planning turns are read-only, then the session's mode applies. `workspace-write` allows only the workdir.
@@ -75,7 +75,7 @@ All 186 code references in these documents were checked against the code on 2026
 - **Calibration.** Claude Code was last calibrated at 2.1.272 ([docs/step2step.md](../../step2step.md)) and Codex verified at 0.153.4 ([docs/codex-control.md](../../codex-control.md)).
 - **Doc errors found and fixed:**
   - The analysis in [Q04-2](../interview/q04-2-orchestrator-on-both-cli.md), and session-context.md §8.4 before it was corrected on 2026-10-08, mention `SessionHandle.send`. No such method exists; the API is `send_prompt`, `wait_turn` and `run_turn`.
-  - [q10-confirmed.md](../interview/q10-confirmed.md) §5 cites `Notifier` at `:326` and `RunState` at `:370`, one to three lines early; they start at `:327` and `:373`. Its "`:575`" for the Codex cleanup is the `def stop` line; the request is at `:580-582`. The interview record is left as it is.
+  - [q10-confirmed.md](../interview/q10-confirmed.md) §5 cites `Notifier` at `:326` and `RunState` at `:370`, one to three lines early; they start at `:327` and `:373`. Its §3 cites "`:575`" for the Codex cleanup, which is the `def stop` line; the request is at `:580-582`. The interview record is left as it is.
 
 <a id="vendors"></a>
 ## Vendors
