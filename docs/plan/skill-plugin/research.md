@@ -1,25 +1,25 @@
 # Facts this design relies on
 
 These facts change over time, so check them again before relying on them. Each section says when it was checked.
-- **Official sources:** official docs, source code and local checks are linked.
+- **Official sources:** official docs, source code, man pages and local checks are linked or named.
 - **Unofficial sources:** blogs, issues and forum posts are marked (unofficial).
 
-This file replaces the vendor section that was in [session-context.md](../session-context.md) (§7, checked 2026-10-06 and 2026-10-07). Its contents moved here and were updated on 2026-10-08 and 2026-10-11.
+This file replaces the vendor section that was in [session-context.md](../session-context.md) (§7, checked 2026-10-06 and 2026-10-07). Its contents moved here and were updated on 2026-10-08, 2026-10-11 and 2026-10-13 to 2026-10-16.
 
 <a id="environment"></a>
-## This Mac (checked 2026-10-07, 2026-10-08 and 2026-10-11)
+## This Mac (checked 2026-10-07, 2026-10-08, 2026-10-11 and 2026-10-16)
 
 - **Versions:**
-  - Claude Code 2.1.296 on 2026-10-11. It was 2.1.292 on 2026-10-08 and updates itself in the background.
-  - codex-cli 0.155.1. The latest release is 0.162.1, from 2026-10-09.
+  - Claude Code 2.1.301 on 2026-10-16. It was 2.1.296 on 2026-10-11 and 2.1.292 on 2026-10-08, because it updates itself in the background.
+  - codex-cli 0.162.1 on 2026-10-13 and 2026-10-16. It was 0.155.1 on 2026-10-11.
   - uv 0.11.19.
   - macOS 15.7.5 (Darwin 24.6).
 - **Python:** the system `python3` is 3.9, but the repo needs 3.12 or later. Python 3.13 is at `/opt/anaconda3/bin/python3.13`, and there is no `.venv`.
 - **Accounts:** Claude config folders `~/.claude` and `~/.claude-wook`; one Codex home, `~/.codex` (Q12).
-- **Plugins** (2026-10-08): Claude has only `swift-lsp` installed in `~/.claude`. Skill-Techblog is not installed.
-- **Plugin commands:**
-  - `claude plugin install|enable|disable|…` exists, with `--json` output.
-  - `codex plugin add|list|marketplace|remove` exists, and `codex plugin marketplace add|upgrade|…`.
+- **Plugins** (2026-10-08, not checked since): Claude had only `swift-lsp` installed in `~/.claude`. Skill-Techblog was not installed.
+- **Plugin commands** (checked 2026-10-13 with `--help`):
+  - Claude Code: `claude plugin install|update|uninstall|enable|disable|list|…`, with `--json` output. `claude plugin update <plugin>` updates a plugin to the latest version, and its help says "restart required to apply". `claude plugin marketplace add|list|remove|update`; `update` refreshes marketplaces from their source.
+  - Codex: `codex plugin add|list|marketplace|remove`, and `codex plugin marketplace add|list|upgrade|remove`. `upgrade` refreshes the configured Git marketplace snapshots.
 - **Tests:** expected result 506 passed, 2 skipped, 8 deselected.
 
   ```bash
@@ -28,50 +28,59 @@ This file replaces the vendor section that was in [session-context.md](../sessio
   ```
 
 <a id="code"></a>
-## The existing code (main at `ceb5a73`; checked 2026-10-11)
+## The existing code (main at `5c15481`; checked 2026-10-13)
 
-The full reuse and gap map with line references is in [launcher.md](launcher.md#reuse). The main points:
+All 186 code references in these documents were checked against the code on 2026-10-13. The full reuse and gap map with line references is in [launcher.md](launcher.md#reuse). The main points:
 
 - **One child per handle.** step2step drives one session per handle and has no supervisor and no command channel for other processes.
+- **No lock between processes.** No code uses `fcntl`, `flock` or a lock file. step2step has thread locks only (`step2step/codex/transport.py:20`, `:70`; `step2step/codex/session.py:70`; `step2step/terminal/pty_session.py:59`; `step2step/terminal/screen.py:16`). The files that processes share today are the stop files, the state file saved by an atomic rename, and the hook's signal file; none of them is a lock.
 - **Codex threads.** Codex handles must be driven from the thread that created them (`step2step/codex/session.py:167-171`).
 - **Claude's flags.**
   - Every Claude session gets `--session-id`, `--settings` and `--dangerously-skip-permissions` (`step2step/claude/runner.py:363-370`).
   - `model`, `effort` and `system_prompt_append` have their own parameters. Anything else goes through `extra_args`, appended as is (`:381`).
   - Plan mode is entered with Shift+Tab before each prompt (`step2step/claude/session.py:222-223`).
-  - `approve_plan()` picks option 1, "Yes, and bypass permissions", so the session returns to bypass (`step2step/claude/screen.py:58-62`).
+  - `approve_plan()` picks option 1 of the plan menu (`step2step/claude/runner.py:1287-1310`), so the session returns to bypass (`step2step/claude/session.py:107-110`). On the verified 2.1.272 its label reads "Yes, and switch to bypass permissions" (`step2step/claude/screen.py:68`).
 - **Codex's parameters.**
   - `thread/start` always boots read-only (`step2step/codex/session.py:105-119`).
   - Each turn's sandbox is set per turn (`:183-188`): planning turns are read-only, then the session's mode applies. `workspace-write` allows only the workdir.
   - The defaults are approval `never` and sandbox `danger-full-access` (`:44-54`).
   - Nothing sets network access or extra writable roots.
+- **Logins.**
+  - Codex accepts only a ChatGPT login: `step2step/codex/session.py:97-99` rejects any other account type, and `step2step/codex/transport.py:76` forces `forced_login_method="chatgpt"`.
+  - Claude only removes `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and the `CLAUDE*` variables from the child's environment (`step2step/claude/runner.py:72-83`, `:153-163`). Nothing checks how a Claude config folder is logged in; `Runner.preflight` checks the executable, the runtime folder and disk space only (`:245-278`).
+- **Config folders.**
+  - `CLAUDE_CONFIG_DIR` appears nowhere in the code. `child_env()` would strip it (`step2step/claude/runner.py:160`), and `tests/test_env_scrub.py:6-13` asserts that no `CLAUDE*` variable survives.
+  - `~/.claude` is hard-coded in the transcript lookup (`step2step/claude/transcript.py:27`; `find_transcript`'s `base` parameter, `:25-31`, is never passed), in the settings path (`step2step/claude/calibrate_model.py:37`) and in `tests/test_live.py:22`.
+  - A test asserts that Codex passes `CODEX_HOME` through (`tests/codex/test_transport.py:78-84`).
 - **The unit loop.**
   - It runs a flat list in file order, one session at a time.
   - It runs in bypass mode (`barrel/core/unitloop.py:439`) and approves any plan menu blindly (`:767-783`). It answers questions with a fixed default (`:82`).
-  - It only creates Claude sessions (`:433-442`).
+  - It only creates Claude sessions (`:433-442`), one per attempt (`:650`).
   - Its run configuration is one JSON file merged over `DEFAULT_CONFIG` (`:47-83`): preflight, gates (`before`, `after_timeout`, `env_recover`), budget, ladder, `repeat_limit`. There is no setup or install command.
-  - On a usage limit it sleeps a fixed 900 s and retries the same session (`:703-708`).
-  - A failed recovery halts the whole run (`:752`, `:755`).
+  - On a usage limit it sleeps `min(usage_wait_seconds, the remaining run budget)` and retries the same session (`:703-708`, at `:704`). `usage_wait_seconds` is 900 by default (`:81`).
+  - A failed recovery halts the whole run (`:752`, `:755`). A gate defect halts it too: at baseline through `:565-566`, during an attempt through `:738-739` and `:623`.
 - **Budgets.** `Budget` (`barrel/core/failures.py:262-288`) requires every field to be finite and positive. Its defaults:
   - 3,600 s per turn
   - 12 turns and 4 hours per unit
-  - 24 hours per run, checked at `unitloop.py:540-541`
+  - 24 hours per run, checked at `unitloop.py:540-541` and before every turn at `:671-673`
 - **Git.**
-  - `barrel/core/gitops.py` creates no worktrees and no branches; it checks a branch and pushes.
-  - The path-scoped `commit` (`:78-134`) is used only by tests; the unit loop uses `commit_all`.
+  - `barrel/core/gitops.py` works on one repo, creates no worktrees and no branches; it checks a branch and pushes.
+  - The path-scoped `commit` (`:78-134`) is used only by tests; the unit loop uses `commit_all` (`unitloop.py:829`).
 - **Usage resets** are kept as text: Claude's "7pm" (`step2step/claude/screen.py:111-114`), Codex's `resetsAt` values (`step2step/codex/session.py:504-516`). Nothing converts them into a time.
 - **Context use.** No code reads token usage for Claude. Codex token usage is kept raw (`step2step/codex/events.py:86-87`).
-- **Transcripts.** Claude transcripts are looked up under `~/.claude/projects`. `find_transcript` has a `base` parameter that no caller passes (`step2step/claude/transcript.py:25-31`). `CLAUDE_CONFIG_DIR` appears nowhere in the code.
 - **Tests.**
   - `barrel/tests/` has 84 test functions, none of them live. The unit loop's 24 (`barrel/tests/test_unitloop.py`) use fake sessions; the rest test gates, failures, git, preflight and verification without sessions.
   - `tests/` has 397 more.
   - The 8 live tests are opt-in: `tests/test_live.py` (Claude, `STEP2STEP_LIVE=1`) and `tests/codex/test_live.py` (Codex, `STEP2STEP_CODEX_LIVE=1`).
 - **Calibration.** Claude Code was last calibrated at 2.1.272 ([docs/step2step.md](../../step2step.md)) and Codex verified at 0.153.4 ([docs/codex-control.md](../../codex-control.md)).
-- **A doc error.** The analysis in [Q04-2](../interview/q04-2-orchestrator-on-both-cli.md), and session-context.md §8.4 before it was corrected on 2026-10-08, mention `SessionHandle.send`. No such method exists; the API is `send_prompt`, `wait_turn` and `run_turn`.
+- **Doc errors found and fixed:**
+  - The analysis in [Q04-2](../interview/q04-2-orchestrator-on-both-cli.md), and session-context.md §8.4 before it was corrected on 2026-10-08, mention `SessionHandle.send`. No such method exists; the API is `send_prompt`, `wait_turn` and `run_turn`.
+  - [q10-confirmed.md](../interview/q10-confirmed.md) §5 cites `Notifier` at `:326` and `RunState` at `:370`, one to three lines early; they start at `:327` and `:373`. Its "`:575`" for the Codex cleanup is the `def stop` line; the request is at `:580-582`. The interview record is left as it is.
 
 <a id="vendors"></a>
 ## Vendors
 
-**Claude Code** (checked 2026-10-06 to 2026-10-11)
+**Claude Code** (checked 2026-10-06 to 2026-10-13)
 - **Hooks** ([docs](https://code.claude.com/docs/en/hooks)):
   - `SessionStart` matchers: `startup`, `resume`, `clear`, `compact`, `fork`.
   - `additionalContext` works on `SessionStart`, `UserPromptSubmit` and `PostToolUse`. Injected text is limited to 10,000 characters (09-29 draft).
@@ -82,10 +91,10 @@ The full reuse and gap map with line references is in [launcher.md](launcher.md#
   - Hook processes inherit the claude process's environment, apart from a few scrubbed variables.
   - Hooks from settings files, including `--settings`, and from plugins merge, and all matching hooks run ([settings reference](https://code.claude.com/docs/en/settings-reference)).
 - **Skills:** a skill body can use `${CLAUDE_SKILL_DIR}`, and in plugin skills `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PLUGIN_DATA}`. These are substituted into the text; they are not environment variables in Bash commands ([docs](https://code.claude.com/docs/en/skills)). Plugin skills are listed as `plugin:skill`.
-- **Login check:** `claude auth status` prints JSON and exits 0 when logged in and 1 when not. Its `configDirectory` field follows `CLAUDE_CONFIG_DIR` ([CLI reference](https://code.claude.com/docs/en/cli-reference)).
+- **Login check:** `claude auth status` prints JSON and exits 0 when logged in and 1 when not. Its `configDirectory` field follows `CLAUDE_CONFIG_DIR` ([CLI reference](https://code.claude.com/docs/en/cli-reference)). Which field tells a subscription login from an API key is a spike check.
 - **Context size:** each assistant entry in the transcript JSONL records `message.usage`. Context size is input plus cache-creation plus cache-read tokens. The status line also receives `context_window.used_percentage` ([docs](https://code.claude.com/docs/en/statusline)).
 - **Background sessions** (`claude --bg`, research preview since 2.1.139) ([docs](https://code.claude.com/docs/en/agent-view)):
-  - One supervisor service per user runs every background session, each as its own process (`claude daemon status`).
+  - One supervisor service per user runs every background session, each as its own process (`claude daemon status`). It starts when needed, not at login (checked for Q22-2).
   - Flags: `--model`, `--permission-mode`, `--name`, `--settings`, `--plugin-dir`.
   - A session that is finished or waiting, and unattached for about an hour, has its process stopped.
   - The docs do not say whether a background session can start another one.
@@ -108,7 +117,7 @@ The full reuse and gap map with line references is in [launcher.md](launcher.md#
   - Kept per machine and per config folder.
   - Off in background sessions and in sessions started by another session.
   - Barrel does not rely on it (Q07).
-- **Accounts:** `CLAUDE_CONFIG_DIR` separates both the config and the login. On macOS each config folder gets its own Keychain item ([aq.dev](https://aq.dev/guides/run-multiple-claude-code-accounts/), unofficial). Plugins are installed per config folder (Q05).
+- **Accounts:** `CLAUDE_CONFIG_DIR` separates both the config and the login. On macOS each config folder gets its own Keychain item ([aq.dev](https://aq.dev/guides/run-multiple-claude-code-accounts/), unofficial). Plugins are installed per config folder (Q05). Whether a Barrel-managed folder can reuse an account's Keychain item is a spike check.
 - **MCP servers:** `claude mcp add <name> …`; local and user scopes are stored per config folder ([docs](https://code.claude.com/docs/en/mcp)).
   - Playwright: `claude mcp add playwright npx @playwright/mcp@latest` ([microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp)). For one session only, `--mcp-config <file>` works.
 - **Computer use** in the CLI ([docs](https://code.claude.com/docs/en/computer-use)):
@@ -116,12 +125,12 @@ The full reuse and gap map with line references is in [launcher.md](launcher.md#
   - Turned on per project in `/mcp`.
   - Needs the Accessibility and Screen Recording permissions, and an approval for each app in each session.
 - **Chrome:** `claude --chrome` needs the Claude in Chrome extension and a claude.ai login ([docs](https://code.claude.com/docs/en/chrome)).
-- **Updates:** Claude Code updates itself in the background. `DISABLE_AUTOUPDATER=1` stops that; `claude update` still works ([docs](https://code.claude.com/docs/en/setup)).
+- **Updates:** Claude Code updates itself in the background. `DISABLE_AUTOUPDATER=1` stops that; `claude update` still works ([docs](https://code.claude.com/docs/en/setup)). Marketplaces can update installed plugins in the background, per marketplace ([plugin security docs](https://code.claude.com/docs/en/plugins/security)); Barrel's own version check covers a folder whose plugin moved on by itself ([launcher.md](launcher.md#versions)).
 - **Plugins:**
   - Chat and Cowork refuse a plugin that has a top-level `bin/` (09-29 draft).
   - Skill descriptions are limited to about 1,536 characters each in the skill listing (09-29 draft, re-check).
 
-**Codex (0.155.1; checked 2026-10-08 and 2026-10-11)**
+**Codex (0.155.1 checked 2026-10-08 and 2026-10-11; 0.162.1 installed since)**
 - **Hooks** ([docs](https://learn.chatgpt.com/docs/hooks)):
   - 12 events: `SessionStart`, `SessionEnd`, `SubagentStart`, `SubagentStop`, `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `UserPromptSubmit`, `Stop`, `Interrupt`.
   - Every hook input has `session_id`, `transcript_path`, `cwd`, `hook_event_name` and `model`.
@@ -152,13 +161,17 @@ The full reuse and gap map with line references is in [launcher.md](launcher.md#
   - `spawn_agent` takes `model` and `reasoning_effort` on every call.
   - The cap is `agents.max_concurrent_threads_per_session`; the legacy `max_threads` default was 6 ([#13964](https://github.com/openai/codex/issues/13964), unofficial).
   - The depth limit is not enforced in 0.155.1 ([#46704](https://github.com/openai/codex/issues/46704)).
-- **Login check:** `codex login status` exits 0 when logged in. It follows `CODEX_HOME` ([docs](https://developers.openai.com/codex/auth)).
-- **Plugins** ([docs](https://developers.openai.com/codex/plugins/build)): `.codex-plugin/plugin.json`, `skills/`, `hooks/hooks.json`. Marketplaces are added with `codex plugin marketplace add`.
+- **Login check:** `codex login status` exits 0 when logged in. It follows `CODEX_HOME` ([docs](https://developers.openai.com/codex/auth)). The login is kept in `$CODEX_HOME/auth.json`.
+- **Plugins** ([docs](https://developers.openai.com/codex/plugins/build)): `.codex-plugin/plugin.json`, `skills/`, `hooks/hooks.json`. Marketplaces are added with `codex plugin marketplace add` and refreshed with `codex plugin marketplace upgrade`.
 - **Skills** ([docs](https://learn.chatgpt.com/docs/build-skills)):
   - Discovered from `.agents/skills` (from the current folder up to the repo root), `~/.agents/skills`, `/etc/codex/skills` and plugins.
   - The parser reads only `name`, `description` and `metadata.short-description`. The bundled validator rejects other keys such as `compatibility`.
   - There is no variable substitution. Codex resolves relative paths in `SKILL.md` against that file's folder.
 - **MCP servers:** `codex mcp add <name> -- <command>` or `--url <URL>`, then `codex mcp login <name>` for OAuth. They are stored in `$CODEX_HOME/config.toml` ([docs](https://developers.openai.com/codex/mcp)).
+- **Image generation** (checked 2026-10-12 and 2026-10-16; [docs](https://learn.chatgpt.com/docs/image-generation)):
+  - Invoked by describing the image, or explicitly with `$imagegen` in the prompt.
+  - "Built-in image generation uses `gpt-image-2` and counts toward your general Codex usage limits." No API key is needed. Image turns use those limits three to five times faster on average.
+  - Barrel's designer may use it when it runs on Codex; it is one option, not a requirement ([workflow.md](workflow.md#design)).
 - **`/goal`:** since 0.128.0. Goals persist across restarts and are stored in `~/.codex`, outside the repo.
 
 **Slack** (checked 2026-10-06 to 2026-10-11; Q10 and Q10-2 sources are in [Q10](../interview/q10-slack-progress-reports.md) and [Q10-2](../interview/q10-2-pc-view-stop-language.md))
@@ -207,10 +220,22 @@ The full reuse and gap map with line references is in [launcher.md](launcher.md#
   - `files.upload` was retired on 2025-11-12.
   - Use `files.getUploadURLExternal`, then `files.completeUploadExternal` with the channel and `thread_ts`. This needs `files:write`, and the bot must be a channel member ([docs](https://docs.slack.dev/reference/methods/files.completeUploadExternal)).
 
-**macOS** (checked 2026-10-11 on 15.7.5; `man caffeinate`, `IOPMLib.h`)
-- `caffeinate -i -w <pid>` prevents idle sleep until that process exits.
-- `-s` prevents system sleep, but only on AC power.
-- Neither prevents sleep when a laptop's lid closes. The header says "the system may still sleep for lid close, Apple menu, low battery, or other sleep reasons."
+**macOS** (checked on 15.7.5; man pages read on 2026-10-16)
+- **Sleep** (`man caffeinate`, `IOPMLib.h`; checked 2026-10-11):
+  - `caffeinate -i -w <pid>` prevents idle sleep until that process exits.
+  - `-s` prevents system sleep, but only on AC power.
+  - Neither prevents sleep when a laptop's lid closes. The header says "the system may still sleep for lid close, Apple menu, low battery, or other sleep reasons."
+- **The input dialog** ([Mac Automation Scripting Guide: Prompting for Text](https://developer.apple.com/library/mac/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/PromptforText.html)): AppleScript's `display dialog "…" default answer "" with hidden answer` asks for text with the input hidden, and returns what was typed. Whether a background launcher can show it is spike item 55.
+- **Keychain** (`man security`): `security add-generic-password … -T <appPath>` names an application that may access the item; several `-T` options are allowed, and `-T ""` allows none. Keychain access lists identify an application by its code signature (spike item 57).
+- **sudo** (`man sudo`):
+  - `-S` reads the password from standard input instead of the terminal.
+  - `SUDO_ASKPASS` names a helper program that sudo runs to read the password when no terminal is available, or when `-A` is given.
+- **launchd** (`man launchd.plist`, `man launchctl`):
+  - `KeepAlive.SuccessfulExit` "implies that RunAtLoad is set to true, since the job needs to run at least once before an exit status can be determined".
+  - `KeepAlive.Crashed` restarts a job that exited on a crash signal.
+  - `launchctl bootstrap` loads a service definition into a domain, and `launchctl kickstart` "instructs launchd to run the specified service immediately, regardless of its configured launch conditions".
+  - Agents in `~/Library/LaunchAgents` are loaded at every login, and macOS 13 and later lists background items under Login Items ([Eclectic Light](https://eclecticlight.co/2023/02/15/controlling-login-and-background-items-in-ventura/), unofficial; from Q22-2).
+- **Priority** (`man taskpolicy`): `taskpolicy` runs a program with a lower scheduling or I/O policy, for example `-c utility` or `-c background`, and its children inherit it. `nice` lowers the scheduling priority.
 
 **Local PC view** (measured on this Mac on 2026-10-07)
 - **Cost:**
@@ -222,6 +247,10 @@ The full reuse and gap map with line references is in [launcher.md](launcher.md#
   - The fixes converge on five things: bind to 127.0.0.1, require a secret token, allowlist Host and Origin, no side effects on GET, no parameters on actions.
 - **Safari:** Safari 26.4 on this Mac predates WebKit's 2026-06-04 fix, which unblocked localhost when "warn on non-secure sites" is on.
 - **Barrel.app:** an `osacompile` applet on macOS 15.7.5 was 192 KB, ad-hoc signed, passed `codesign --verify --deep --strict`, carried no quarantine attribute and opened without a Gatekeeper prompt.
+
+**Packages** (checked 2026-10-16)
+- **OSV** ([API docs](https://google.github.io/osv.dev/post-v1-query/)): `POST https://api.osv.dev/v1/query` with `{"package": {"name": …, "ecosystem": …}, "version": …}` returns the known vulnerabilities of that version. The docs name no API key and say "Currently there are no limits on the API".
+- **Registries** report whether a package exists, its latest release and its declared license; each ecosystem has its own API. The check runs in a context subagent ([task-execution.md](task-execution.md#packages)).
 
 **Skill-Techblog** ([repo](https://github.com/KANG-YEONWOOK/Skill-Techblog), MIT; checked 2026-10-08)
 - **v0.5.0** (commit `5895109`, "fix: codex plugin", 2026-10-07):
@@ -281,7 +310,7 @@ The source is [the model tier doc](../../claude-gpt-모델-티어-매핑-가격�
   - Default efforts differ by model.
 
 <a id="prior-art"></a>
-## Prior art behind Q11–Q16 and the 2026-10-11 review
+## Prior art behind the interview answers
 
 Full lists with links are in the interview records. The points the design uses:
 
@@ -307,6 +336,25 @@ Full lists with links are in the interview records. The points the design uses:
   - In debate, models flip to agree with each other ([2509.05396](https://arxiv.org/abs/2509.05396)).
   - When both models are wrong, they give the same wrong answer about 60% of the time, even across vendors ([2506.07962](https://arxiv.org/abs/2506.07962)).
   - Checking claims against sources ([Verify when Uncertain](https://arxiv.org/abs/2502.15845)) fits Q16's "research, then review and cross-check".
+- **Q18, a run per request** (checked 2026-10-12; links in [Q18](../interview/q18-one-run-per-request.md)):
+  - GitHub's Copilot coding agent opens a branch and a pull request per assigned issue, and takes changes as comments on that pull request.
+  - Devin runs a VM per session and takes messages for a running session. Cursor runs each parallel agent in its own worktree and branch. Codex cloud runs each task in its own sandbox.
+  - In all of them, a new request is a new task with its own branch; only instructions for a running task go to it.
+- **Q19, what to confirm** (checked 2026-10-12; links in [Q19](../interview/q19-new-technology-threshold.md)):
+  - Architecture decision records cover only decisions that are expensive to reverse: languages, frameworks, storage, communication, authentication, deployment.
+  - AGENTS.md guides commonly say to ask before adding a production dependency (verified in three guides). A second rule quoted in the question could not be verified; the Q19 record says so.
+  - GitHub's dependency review action blocks forbidden licenses and vulnerable dependencies without asking per package.
+  - In LLM-written code, nonexistent package names appeared 5.2% of the time for commercial models and 21.7% for open models ([2406.10279](https://arxiv.org/abs/2406.10279)), so every new package is checked.
+- **Q20, credentials and sudo** (checked 2026-10-12; links in [Q20](../interview/q20-credentials-and-sudo-tool.md)):
+  - Devin and GitHub's Copilot agent take secrets in a settings store, not in the conversation, and pass them to the agent as environment variables.
+  - Claude Code's Bash tool has no terminal, so a sudo that asks for a password fails. Community hooks show a GUI password prompt through `SUDO_ASKPASS`, or keep the password away from the model through an MCP server (unofficial).
+  - Apple's TN2065: `do shell script … with administrator privileges` asks for authentication, and the same script does not ask again for five minutes.
+- **Q21, updates** (checked 2026-10-12; links in [Q21](../interview/q21-auto-update-consent.md)):
+  - Claude Code updates itself in the background unless `DISABLE_AUTOUPDATER=1` is set, and its marketplaces can update plugins in the background.
+  - VS Code checks for updates in the background by default.
+- **Q22-2, residency** (checked 2026-10-12; links in [Q22-2](../interview/q22-2-launcher-residency.md)):
+  - Claude Code's background supervisor starts when needed, not at login.
+  - Docker Desktop has a "start at login" setting that is off by default.
 - **Hash IDs (2026-10-11 review, [runs.md](runs.md#ids)):**
   - **Beads**, an issue tracker for coding agents stored in git (now `gastownhall/beads`):
     - It made hash IDs opt-in in 0.20.0 (2025-10-30) and the default in 0.20.1 (2025-10-31), to stop collisions between agents and branches.
